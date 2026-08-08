@@ -495,10 +495,39 @@
                     </div>
                 </div>
 
-                <h2>为什么必须有位置传感器</h2>
-                <p>FOC 的全部魔法，都建立在一个前提上：<strong>必须知道转子此刻转到哪个角度</strong>。原因在于 Park 变换——它需要一个角度 θ 作为输入，把电流从静止的 αβ 坐标系旋转到<strong>固定在转子上、随之旋转</strong>的 dq 坐标系。</p>
+                <h2>位置传感器 vs 无感方案</h2>
+                <p>FOC 的核心前提是<strong>知道转子此刻的角度 θ</strong>——Park 变换要靠它把电流旋到 dq 坐标系，才能让 d 轴对齐磁通、q 轴纯粹出转矩。但"知道 θ"有两条路：<strong>装传感器直接读</strong>，或<strong>不装、用算法估算</strong>。</p>
 
-                <p>只有当 d 轴精确对齐转子的永磁体方向（磁通方向）时，d 轴电流才纯粹产生磁通、q 轴电流才纯粹产生转矩，两者才真正解耦。一旦 θ 不准（比如用霍尔传感器只有 60° 分辨率），d/q 之间就会串扰，转矩出现脉动、效率下降——这正是高精度编码器对 FOC 至关重要的原因。</p>
+                <table class="cmp-table">
+                    <thead><tr><th>方案</th><th>怎么拿到 θ</th><th>优点</th><th>代价</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>有感</strong>（编码器 / 旋变）</td>
+                            <td>直接机械读数</td>
+                            <td>全速段精确、动态响应好、零速也有角度</td>
+                            <td>多一套硬件、引线束、成本与体积</td>
+                        </tr>
+                        <tr>
+                            <td><strong>无感·反电动势观测</strong><br>（SMO 滑模 / EKF 卡尔曼）</td>
+                            <td>从电流电压估算反电动势</td>
+                            <td>省传感器、无引线、成本低、耐恶劣环境</td>
+                            <td>零速/极低速失效（反电动势 ∝ 转速）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>无感·高频注入</strong><br>（HF Injection）</td>
+                            <td>注入高频电压，从凸极响应提取角度</td>
+                            <td>低速/零速也能估角度</td>
+                            <td>需要电机有凸极性（IPMSM），表贴式 SPMSM 难用</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>工业产品常<strong>混合</strong>：低速用高频注入，中高速切反电动势观测。选择主要看场景——伺服、电动车驱动轴、精密位置控制这些对精度和零速性能要求高的，装传感器；无人机、电动工具、水泵风机等成本敏感或引线不便的，走无感。</p>
+
+                <div class="callout">
+                    <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+                    <p><strong>给你的建议：</strong>既然你的电机有位置传感器，就先把有感 FOC 调顺——θ 直接读，电流环干净，把精力花在 PI 调参和 SVPWM 上回报最高。无感观测器调参本身就是一门学问，等有感跑顺了再挑战不迟。本站的仿真采用有感方案（θ 作为已知输入）。</p>
+                </div>
 
                 <div class="callout">
                     <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9c2.5 0 4.7 1 6.3 2.7"/><path d="M21 3v6h-6"/></svg></div>
@@ -1762,7 +1791,7 @@
                     q: 'Park 变换需要一个关键输入，它是？',
                     o: ['母线电压', '转子机械位置角 θ（电角度）', '环境温度', 'PWM 占空比'],
                     a: 1,
-                    e: 'Park 变换（2s→2r）把静止的 αβ 矢量旋转到固定在转子上的 dq 坐标系，旋转量就是转子电角度 θ——这正是必须有位置传感器的原因。'
+                    e: 'Park 变换（2s→2r）把静止的 αβ 矢量旋转到固定在转子上的 dq 坐标系，旋转量就是转子电角度 θ。θ 可来自位置传感器（有感），也可由反电动势观测/高频注入等算法估算（无感 FOC）。'
                 },
                 {
                     q: '在 FOC 中，id（d 轴电流）通常被控制为多少？',
