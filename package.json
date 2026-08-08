@@ -1,0 +1,33 @@
+{
+  "name": "visual-foc",
+  "version": "1.0.0",
+  "description": "Interactive FOC (Field-Oriented Control) learning platform with real-time PMSM simulation",
+  "main": "index.js",
+  "scripts": {
+    "dev": "live-server src",
+    "build": "node build.js",
+    "clean": "rimraf docs",
+    "start": "npm run dev"
+  },
+  "keywords": [
+    "foc",
+    "field-oriented-control",
+    "bldc",
+    "pmsm",
+    "motor-control",
+    "clarke-transform",
+    "park-transform",
+    "svpwm",
+    "pi-controller",
+    "embedded"
+  ],
+  "author": "Visual FOC",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "rimraf": "^3.0.2"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.2"
+  }
+}

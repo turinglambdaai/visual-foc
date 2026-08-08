@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output (regenerated from src/ by `npm run build`)
+# docs/ is committed for GitHub Pages legacy build type
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

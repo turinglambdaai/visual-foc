@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual FOC — 磁场定向控制交互式学习</title>
+    <meta name="description" content="交互式 FOC（磁场定向控制）学习平台 — 通过实时动画理解 Clarke / Park 坐标变换，调参真实 PMSM 物理仿真，直观掌握 BLDC 电机控制原理">
+    <meta name="keywords" content="FOC, 磁场定向控制, BLDC, PMSM, Clarke变换, Park变换, SVPWM, PI控制器, 电机控制, 坐标变换, 无刷电机">
+    <meta property="og:title" content="Visual FOC — 磁场定向控制交互式学习">
+    <meta property="og:description" content="交互式 FOC 学习平台 — 实时动画 + PMSM 物理仿真，直观掌握电机控制原理">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://foc.jrtx.site">
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ====================================================================
+           Visual FOC — Global Styles
+           Anthropic-inspired warm palette (consistent with Visual Protocol)
+           ==================================================================== */
+
+        :root {
+            --bg: #F9F7F4;
+            --surface: #FFFFFF;
+            --text: #1C1917;
+            --text-2: #57534E;
+            --text-3: #A8A29E;
+            --accent: #D97757;
+            --accent-hover: #C4623E;
+            --accent-bg: #FFF7ED;
+            --border: #E7E5E4;
+            --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+            --shadow: 0 1px 3px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04);
+            --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.07), 0 2px 4px -2px rgba(28, 25, 23, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(28, 25, 23, 0.08), 0 4px 6px -4px rgba(28, 25, 23, 0.05);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
+            --max-w: 860px;
+            --max-w-wide: 1080px;
+            --nav-h: 56px;
+
+            /* Three-phase colors */
+            --phase-a: #D97757;   /* A — terracotta */
+            --phase-b: #5B8C5A;   /* B — green */
+            --phase-c: #4A6FA5;   /* C — blue */
+            --axis-d: #9B7ACC;    /* d-axis — purple */
+            --axis-q: #C49A4A;    /* q-axis — amber */
+            --rotor-n: #C15F3C;   /* N pole */
+            --rotor-s: #6B7280;   /* S pole */
+            --grid-line: rgba(28, 25, 23, 0.08);
+            --ok: #166534;
+            --ok-bg: #DCFCE7;
+            --err: #991B1B;
+            --err-bg: #FEE2E2;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #171412; --surface: #231F1D; --text: #E7E5E4;
+                --text-2: #A8A29E; --text-3: #78716C; --accent: #E8926A;
+                --accent-hover: #F0A07C; --accent-bg: #2D2218; --border: #3D3835;
+                --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.15);
+                --shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+                --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+                --phase-a: #E8926A; --phase-b: #8FB38E; --phase-c: #7FA0D4;
+                --axis-d: #B9A0DD; --axis-q: #DDB87A;
+                --rotor-n: #E07A52; --rotor-s: #9CA3AF;
+                --grid-line: rgba(231, 229, 228, 0.08);
+                --ok: #86EFAC; --ok-bg: #14532D;
+                --err: #FCA5A5; --err-bg: #7F1D1D;
+            }
+        }
+
+        body[data-theme="light"] {
+            --bg: #F9F7F4; --surface: #FFFFFF; --text: #1C1917;
+            --text-2: #57534E; --text-3: #A8A29E; --accent: #D97757;
+            --accent-hover: #C4623E; --accent-bg: #FFF7ED; --border: #E7E5E4;
+        }
+        body[data-theme="dark"] {
+            --bg: #171412; --surface: #231F1D; --text: #E7E5E4;
+            --text-2: #A8A29E; --text-3: #78716C; --accent: #E8926A;
+            --accent-hover: #F0A07C; --accent-bg: #2D2218; --border: #3D3835;
+            --grid-line: rgba(231, 229, 228, 0.08);
+        }
+
+        /* ---- Reset & Base ---- */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", sans-serif;
+            font-size: 15px; line-height: 1.7; color: var(--text); background: var(--bg);
+            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+        }
+        a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+        a:hover { color: var(--accent-hover); }
+        h1, h2, h3, h4 { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 600; letter-spacing: -0.01em; }
+
+        .container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
+        .container-wide { max-width: var(--max-w-wide); margin: 0 auto; padding: 0 24px; }
+
+        /* ---- Navigation ---- */
+        .site-nav {
+            position: sticky; top: 0; z-index: 100;
+            background: var(--bg); border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        .nav-inner { display: flex; align-items: center; justify-content: space-between; height: var(--nav-h); }
+        .nav-logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-family: "Inter", -apple-system, sans-serif; font-weight: 600; font-size: 1.05em; }
+        .nav-logo:hover { color: var(--accent); }
+        .nav-logo-icon { width: 22px; height: 22px; color: var(--accent); }
+        .nav-links, .nav-right { display: flex; align-items: center; gap: 8px; }
+        .nav-links a { padding: 6px 14px; border-radius: 100px; font-size: 0.9em; color: var(--text-2); transition: color 0.15s, background 0.15s; }
+        .nav-links a:hover { color: var(--text); background: var(--accent-bg); }
+
+        .theme-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border: 1px solid var(--border);
+            border-radius: 100px; background: var(--surface); color: var(--text-2);
+            cursor: pointer; transition: all 0.15s; overflow: hidden; flex-shrink: 0;
+        }
+        .theme-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+        .theme-btn svg { width: 18px; height: 18px; }
+        .theme-btn .icon-sun { display: none; } .theme-btn .icon-moon { display: block; }
+        body[data-theme="dark"] .theme-btn .icon-sun { display: block; }
+        body[data-theme="dark"] .theme-btn .icon-moon { display: none; }
+        @media (prefers-color-scheme: dark) { .theme-btn .icon-sun { display: block; } .theme-btn .icon-moon { display: none; } }
+        body[data-theme="light"] .theme-btn .icon-sun { display: none; } body[data-theme="light"] .theme-btn .icon-moon { display: block; }
+
+        /* ---- Page Header ---- */
+        .page-header { padding: 48px 0 16px; text-align: center; }
+        .page-header h1 { font-size: 2.2em; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px; }
+        .page-header p { color: var(--text-2); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+
+        /* ---- Tabs ---- */
+        .nav-tabs {
+            display: flex; justify-content: center; gap: 4px;
+            margin: 24px auto 32px; padding: 4px; max-width: fit-content;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 100px; flex-wrap: wrap;
+        }
+        .tab-button {
+            padding: 10px 20px; background: transparent; color: var(--text-2);
+            border: none; border-radius: 100px; cursor: pointer;
+            font-size: 0.9em; font-weight: 500; font-family: "Inter", -apple-system, sans-serif;
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .tab-button:hover { color: var(--text); background: var(--accent-bg); }
+        .tab-button.active { background: var(--accent); color: #FFF; }
+
+        .content-section {
+            display: none; background: var(--surface);
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 32px; margin-bottom: 32px;
+        }
+        .content-section.active { display: block; }
+
+        /* ---- Prose content ---- */
+        .lead { font-size: 1.08em; color: var(--text-2); margin-bottom: 24px; }
+        .prose h2 { font-size: 1.35em; margin: 28px 0 12px; }
+        .prose h2:first-child { margin-top: 0; }
+        .prose h3 { font-size: 1.08em; margin: 22px 0 8px; color: var(--text); }
+        .prose p { margin-bottom: 14px; color: var(--text); }
+        .prose ul, .prose ol { margin: 0 0 16px 4px; padding-left: 22px; }
+        .prose li { margin-bottom: 6px; color: var(--text); }
+        .prose strong { color: var(--text); font-weight: 600; }
+        .prose code {
+            font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+            font-size: 0.88em; padding: 2px 6px; border-radius: 5px;
+            background: var(--accent-bg); color: var(--accent);
+        }
+
+        /* Inline math (fraction / vector styled with spans) */
+        .math { font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif; font-style: italic; }
+        .math .vec { font-weight: 600; font-style: italic; }
+        .frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; line-height: 1.1; margin: 0 2px; }
+        .frac .num { border-bottom: 1.3px solid currentColor; padding: 0 4px 1px; }
+        .frac .den { padding: 1px 4px 0; }
+        .sub { font-size: 0.72em; vertical-align: sub; }
+        .sup { font-size: 0.72em; vertical-align: super; }
+
+        /* ---- Concept cards ---- */
+        .concept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 18px 0; }
+        .concept-card { padding: 18px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .concept-card .ic { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: var(--accent-bg); color: var(--accent); margin-bottom: 10px; }
+        .concept-card .ic svg { width: 19px; height: 19px; }
+        .concept-card h4 { font-size: 0.98em; margin-bottom: 4px; }
+        .concept-card p { font-size: 0.86em; color: var(--text-2); margin: 0; line-height: 1.55; }
+
+        /* ---- Callout ---- */
+        .callout { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--radius-sm); background: var(--accent-bg); border: 1px solid var(--accent); margin: 16px 0; }
+        .callout .ci { flex-shrink: 0; color: var(--accent); margin-top: 2px; }
+        .callout .ci svg { width: 18px; height: 18px; display: block; }
+        .callout p { margin: 0; font-size: 0.9em; color: var(--text); }
+
+        /* ---- Compare table ---- */
+        .cmp-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.9em; }
+        .cmp-table th, .cmp-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .cmp-table th { font-weight: 600; color: var(--text-2); font-size: 0.85em; }
+        .cmp-table td { color: var(--text); }
+        .cmp-table tr:last-child td { border-bottom: none; }
+
+        /* ---- Block diagram (FOC signal flow) ---- */
+        .block-diagram { overflow-x: auto; padding: 8px 0; margin: 18px 0; }
+        .block-diagram svg { display: block; min-width: 720px; max-width: 100%; height: auto; }
+        .bd-block text { font-family: "Inter", -apple-system, sans-serif; }
+        .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 0.82em; color: var(--text-2); }
+        .legend span { display: inline-flex; align-items: center; gap: 5px; }
+        .legend i { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+
+        /* ---- Buttons ---- */
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; border-radius: 100px; font-size: 0.92em; font-weight: 500; transition: all 0.15s; cursor: pointer; border: none; font-family: "Inter", -apple-system, sans-serif; }
+        .btn-primary { background: var(--accent); color: #FFF; }
+        .btn-primary:hover { background: var(--accent-hover); color: #FFF; box-shadow: var(--shadow-md); }
+        .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+        .btn-sm { padding: 7px 14px; font-size: 0.82em; }
+
+        /* ---- Footer ---- */
+        .site-footer { border-top: 1px solid var(--border); padding: 24px 0; margin-top: 16px; }
+        .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+        .footer-brand { font-family: "Inter", -apple-system, sans-serif; font-weight: 600; font-size: 0.92em; }
+        .footer-copy { font-size: 0.82em; color: var(--text-3); }
+        .footer-links { display: flex; gap: 16px; }
+        .footer-links a { font-size: 0.85em; color: var(--text-3); }
+        .footer-links a:hover { color: var(--accent); }
+
+        /* ---- Quiz ---- */
+        .quiz-progress { display: flex; gap: 4px; margin-bottom: 18px; }
+        .quiz-progress .seg { flex: 1; height: 4px; border-radius: 2px; background: var(--border); transition: background 0.2s; }
+        .quiz-progress .seg.done { background: var(--accent); }
+        .quiz-progress .seg.cur { background: var(--accent); opacity: 0.6; }
+        .quiz-option { display: block; width: 100%; text-align: left; padding: 14px 18px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; margin-bottom: 8px; font-size: 0.95em; transition: all 0.15s; font-family: inherit; }
+        .quiz-option:hover:not(:disabled) { border-color: var(--accent); }
+        .quiz-option.selected { border-color: var(--accent); background: var(--accent-bg); }
+        .quiz-option.correct { border-color: #28a745; background: var(--ok-bg); color: var(--ok); }
+        body[data-theme="dark"] .quiz-option.correct { color: var(--ok); }
+        .quiz-option.wrong { border-color: #dc3545; background: var(--err-bg); color: var(--err); }
+        .quiz-option:disabled { cursor: default; }
+        .quiz-feedback { margin-top: 12px; padding: 12px 16px; border-radius: 8px; font-size: 0.9em; display: none; }
+        .quiz-feedback.show { display: block; }
+        .quiz-feedback.ok { background: var(--ok-bg); color: var(--ok); }
+        .quiz-feedback.no { background: var(--err-bg); color: var(--err); }
+
+        /* placeholders filled by later edits — transform / sim / tuning */
+        .transform-wrap, .sim-wrap, .tuning-wrap { }
+        @media (max-width: 880px) {
+            .tf-grid, .sim-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* ---- Scenario cards (Tuning) ---- */
+        .scenario-card {
+            display: block; text-align: left; cursor: pointer;
+            padding: 16px; background: var(--bg); border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text);
+            font-family: inherit; transition: all 0.15s;
+        }
+        .scenario-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+        .scenario-card.active { border-color: var(--accent); background: var(--accent-bg); }
+        .scenario-card--warn .sc-ic { color: var(--err); }
+        .sc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .sc-ic { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; background: var(--accent-bg); color: var(--accent); font-weight: 700; font-size: 0.95em; flex-shrink: 0; }
+        .sc-name { font-weight: 600; font-size: 0.95em; font-family: "Inter", -apple-system, sans-serif; }
+        .sc-desc { font-size: 0.83em; color: var(--text-2); line-height: 1.55; margin: 0; }
+        .canvas-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+        canvas { display: block; max-width: 100%; }
+
+        /* ---- Slider control ---- */
+        .slider-row { margin-bottom: 14px; }
+        .slider-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+        .slider-label .name { font-size: 0.88em; color: var(--text-2); font-weight: 500; }
+        .slider-label .val { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.86em; color: var(--accent); font-weight: 600; }
+        input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 3px; background: var(--border); outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--surface); box-shadow: var(--shadow); }
+        input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--surface); box-shadow: var(--shadow); }
+
+        /* ---- Readout / formula chips ---- */
+        .readout-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 12px 0; }
+        .readout { padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .readout .k { font-size: 0.76em; color: var(--text-3); font-family: "SF Mono", monospace; }
+        .readout .v { font-size: 1.05em; font-weight: 600; color: var(--text); font-family: "SF Mono", "Fira Code", monospace; }
+        .formula-box { padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); margin: 12px 0; font-size: 1.02em; }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 768px) {
+            .page-header h1 { font-size: 1.7em; }
+            .content-section { padding: 20px; }
+            .nav-tabs { gap: 2px; }
+            .tab-button { padding: 8px 14px; font-size: 0.82em; }
+            .container, .container-wide { padding: 0 16px; }
+        }
+        @media (max-width: 480px) {
+            .page-header { padding: 32px 0 12px; }
+            .page-header h1 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="site-nav" role="navigation">
+        <div class="nav-inner container-wide">
+            <a href="/" class="nav-logo" aria-label="首页">
+                <svg class="nav-logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span class="nav-logo-text">Visual FOC</span>
+            </a>
+            <div class="nav-links">
+                <a href="https://github.com/turinglambdaai/visual-foc" target="_blank" rel="noopener">GitHub</a>
+                <button class="theme-btn" id="themeToggle" aria-label="切换主题">
+                    <svg class="icon-sun" viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="10" r="4"/><path d="M10 0v3M10 17v3M0 10h3M17 10h3M2.93 2.93l2.12 2.12M14.95 14.95l2.12 2.12M2.93 17.07l2.12-2.12M14.95 5.05l2.12-2.12"/></svg>
+                    <svg class="icon-moon" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.003 8.003 0 1010.586 10.586z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="page-header">
+            <h1>理解 FOC 磁场定向控制</h1>
+            <p>通过实时动画与真实 PMSM 物理仿真，直观掌握 Clarke / Park 坐标变换与电机调参。为调试 BLDC 电机的你而建。</p>
+        </header>
+
+        <div class="nav-tabs" id="navTabs">
+            <button class="tab-button active" data-tab="basics">基础概念</button>
+            <button class="tab-button" data-tab="transforms">变换原理</button>
+            <button class="tab-button" data-tab="sim">交互仿真</button>
+            <button class="tab-button" data-tab="tuning">调参实战</button>
+            <button class="tab-button" data-tab="quiz">知识测验</button>
+        </div>
+
+        <!-- ====================== TAB 1: BASICS ====================== -->
+        <section class="content-section active" id="basics-section">
+            <div class="prose">
+                <h2>什么是 FOC</h2>
+                <p class="lead">FOC（Field-Oriented Control，磁场定向控制）是一种让 <strong>交流电机表现得像直流电机</strong> 的控制策略。它通过数学坐标变换，把复杂的三相交流电流，分解成两个独立的、可像直流电那样单独控制的量：一个控制 <strong>磁通</strong>，一个控制 <strong>转矩</strong>。</p>
+
+                <p>直流电机（特别是他励直流电机）之所以好控制，是因为它的磁通由励磁绕组产生、转矩由电枢电流产生，两者在空间上天然正交、互不干扰。FOC 的目标就是给交流电机"伪造"出这种解耦特性——于是交流电机也能像直流电机那样，<strong>单独、瞬时地控制转矩</strong>，获得平滑、高效、快速的响应。</p>
+
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg></div>
+                        <h4>瞬时转矩控制</h4>
+                        <p>不像六步换相那样按区间粗略通电，FOC 逐电角度计算最佳电流，转矩脉动极小。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></div>
+                        <h4>磁场与转矩解耦</h4>
+                        <p>d 轴电流控制磁通、q 轴电流控制转矩，两个 PI 控制器各自独立调节，互不耦合。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0"/><path d="M12 7v5l3 2"/></svg></div>
+                        <h4>高效平滑</h4>
+                        <p>正弦波驱动（SVPWM）替代方波，电机发热少、噪声低、运行安静——这正是电动车、伺服的首选。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/></svg></div>
+                        <h4>宽调速范围</h4>
+                        <p>支持弱磁扩速，在基速以上仍能输出功率——从静止到高速全段表现一致。</p>
+                    </div>
+                </div>
+
+                <h2>BLDC 与 PMSM：术语澄清</h2>
+                <p>你调试的"BLDC 电机"，从结构上看都是 <strong>无刷 + 永磁转子</strong>。但工程上常按<strong>反电动势波形</strong>区分两个叫法，这决定了该用哪种控制：</p>
+
+                <table class="cmp-table">
+                    <thead><tr><th>特性</th><th>BLDC（梯形波）</th><th>PMSM（正弦波）</th></tr></thead>
+                    <tbody>
+                        <tr><td>反电动势</td><td>梯形（顶部平直）</td><td>正弦波</td></tr>
+                        <tr><td>典型驱动</td><td>六步换相（方波，两相通电）</td><td>FOC（正弦波，三相同时通电）</td></tr>
+                        <tr><td>位置反馈</td><td>霍尔传感器（60°/电角度分辨率）</td><td>编码器或旋变（高精度角度）</td></tr>
+                        <tr><td>转矩脉动</td><td>较大（换相时刻有突变）</td><td>很小（平滑正弦）</td></tr>
+                        <tr><td>适用场景</td><td>无人机、电动工具、成本敏感</td><td>伺服、电动车、AGV、精密控制</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="callout">
+                    <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+                    <p><strong>关键点：</strong>"用 FOC 控制 BLDC" 是完全可行的——很多标称 BLDC 的电机反电动势其实接近正弦，用 FOC 能获得比六步换相更好的性能。本站的仿真采用 <strong>PMSM 正弦波模型</strong>（即 FOC 的标准建模对象），这套原理同样适用于你想用 FOC 驱动的 BLDC 电机。</p>
+                </div>
+
+                <h2>FOC 控制框图</h2>
+                <p>整个 FOC 是一个<strong>闭环反馈系统</strong>。理解这张信号流图，就抓住了 FOC 的全部骨架。红色是电流环（内环），蓝色是反馈角度，紫色是输出：</p>
+
+                <div class="block-diagram">
+                    <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FOC 控制框图">
+                        <defs>
+                            <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+                        </defs>
+                        <g font-size="11" fill="var(--text)">
+                            <!-- Row 1: targets + Park^-1 -->
+                            <rect x="10" y="18" width="78" height="34" rx="6" fill="var(--accent-bg)" stroke="var(--accent)"/>
+                            <text x="49" y="39" text-anchor="middle">id*</text>
+                            <rect x="10" y="70" width="78" height="34" rx="6" fill="var(--accent-bg)" stroke="var(--accent)"/>
+                            <text x="49" y="91" text-anchor="middle">iq*</text>
+
+                            <rect x="112" y="44" width="64" height="34" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+                            <text x="144" y="65" text-anchor="middle">PI (d)</text>
+                            <rect x="112" y="96" width="64" height="34" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+                            <text x="144" y="117" text-anchor="middle">PI (q)</text>
+
+                            <rect x="200" y="44" width="78" height="34" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+                            <text x="239" y="65" text-anchor="middle">vd, vq</text>
+                            <rect x="200" y="96" width="78" height="34" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+
+                            <rect x="302" y="70" width="92" height="34" rx="6" fill="var(--axis-d)" stroke="none" opacity="0.85"/>
+                            <text x="348" y="91" text-anchor="middle" fill="#fff">反 Park (θ)</text>
+
+                            <rect x="414" y="70" width="78" height="34" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+                            <text x="453" y="91" text-anchor="middle">SVPWM</text>
+
+                            <rect x="516" y="70" width="64" height="34" rx="6" fill="var(--phase-c)" stroke="none" opacity="0.85"/>
+                            <text x="548" y="91" text-anchor="middle" fill="#fff">逆变器</text>
+
+                            <rect x="606" y="70" width="84" height="34" rx="6" fill="var(--rotor-n)" stroke="none" opacity="0.9"/>
+                            <text x="648" y="91" text-anchor="middle" fill="#fff">PMSM 电机</text>
+
+                            <!-- Forward arrows row 1 -->
+                            <g stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#ah)" style="color:var(--accent)">
+                                <line x1="88" y1="35" x2="112" y2="55"/>
+                                <line x1="88" y1="87" x2="112" y2="107"/>
+                                <line x1="176" y1="61" x2="200" y2="61"/>
+                                <line x1="176" y1="113" x2="200" y2="113"/>
+                                <line x1="278" y1="61" x2="296" y2="78"/>
+                                <line x1="278" y1="113" x2="296" y2="96"/>
+                                <line x1="394" y1="87" x2="414" y2="87"/>
+                                <line x1="492" y1="87" x2="516" y2="87"/>
+                                <line x1="580" y1="87" x2="606" y2="87"/>
+                            </g>
+
+                            <!-- Feedback blocks row 2 -->
+                            <rect x="414" y="186" width="78" height="34" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+                            <text x="453" y="207" text-anchor="middle">Clarke</text>
+                            <rect x="302" y="186" width="92" height="34" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+                            <text x="348" y="207" text-anchor="middle">Park (θ)</text>
+                            <rect x="190" y="186" width="92" height="34" rx="6" fill="var(--phase-c)" stroke="none" opacity="0.85"/>
+                            <text x="236" y="207" text-anchor="middle" fill="#fff">电流采样</text>
+
+                            <rect x="606" y="186" width="84" height="34" rx="6" fill="var(--phase-b)" stroke="none" opacity="0.85"/>
+                            <text x="648" y="207" text-anchor="middle" fill="#fff">编码器 θ</text>
+
+                            <!-- Feedback arrows -->
+                            <g stroke="var(--text-3)" stroke-width="1.4" fill="none" marker-end="url(#ah)" style="color:var(--text-3)">
+                                <!-- ia,ib,ic from motor down to current sample -->
+                                <path d="M648 104 L648 150 L236 150 L236 186"/>
+                                <!-- current sample -> clarke -> park -->
+                                <line x1="282" y1="203" x2="302" y2="203"/>
+                                <line x1="394" y1="203" x2="414" y2="203"/>
+                                <!-- park output up to summing (id, iq feedback) -->
+                                <path d="M348 186 L348 168 L144 168 L144 130"/>
+                                <!-- encoder theta to inverse park and park -->
+                                <path d="M648 220 L648 248 L348 248 L348 220" stroke-dasharray="4 3"/>
+                                <path d="M348 248 L348 220"/>
+                                <path d="M348 70 L348 60" />
+                            </g>
+                            <!-- theta dashed split to both Park blocks -->
+                            <g stroke="var(--axis-q)" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#ah)" style="color:var(--axis-q)">
+                                <path d="M348 248 L348 104"/>
+                            </g>
+                        </g>
+                        <text x="380" y="14" font-size="10.5" fill="var(--text-3)" text-anchor="middle">正方向：目标 → 控制器 → 调制 → 电机</text>
+                        <text x="380" y="274" font-size="10.5" fill="var(--text-3)" text-anchor="middle">反馈：电机 → 电流采样 + 角度 → 变换回 dq</text>
+                    </svg>
+                </div>
+                <div class="legend">
+                    <span><i style="background:var(--accent)"></i>电流环（目标/控制）</span>
+                    <span><i style="background:var(--axis-d)"></i>反 Park（把 dq 电压变回静止坐标）</span>
+                    <span><i style="background:var(--phase-c)"></i>测量</span>
+                    <span><i style="background:var(--axis-q)"></i>θ 反馈（虚线，来自编码器）</span>
+                    <span><i style="background:var(--rotor-n)"></i>电机与转子</span>
+                </div>
+
+                <h2>核心组件</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M3 12h6M15 12h6"/></svg></div>
+                        <h4>三相定子绕组</h4>
+                        <p>A、B、C 三组线圈在空间上相差 120° 电角度。给它们通相位差 120° 的正弦电流，就能合成出一个<strong>旋转的磁场</strong>。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v6M12 16v6"/><path d="M6 12H2M22 12h-4"/><circle cx="12" cy="12" r="4"/></svg></div>
+                        <h4>永磁转子</h4>
+                        <p>转子上有永久磁铁（N/S 极），自身磁场恒定。定子旋转磁场拖着转子磁铁同步旋转——这就是"同步"电机名字的由来。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3l3 6-3-1-3 1 3-6M12 21l3-6-3 1-3-1 3 6"/></svg></div>
+                        <h4>位置传感器</h4>
+                        <p>编码器（光电/磁）或旋变给出转子的精确角度 θ。它是 FOC 的"眼睛"——没有 θ，Park 变换无从谈起。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div>
+                        <h4>逆变器（MOSFET/IGBT）</h4>
+                        <p>三相全桥，把直流母线电压通过 PWM 切换成三相交流。SVPWM 算法决定每个开关的占空比。</p>
+                    </div>
+                </div>
+
+                <h2>为什么必须有位置传感器</h2>
+                <p>FOC 的全部魔法，都建立在一个前提上：<strong>必须知道转子此刻转到哪个角度</strong>。原因在于 Park 变换——它需要一个角度 θ 作为输入，把电流从静止的 αβ 坐标系旋转到<strong>固定在转子上、随之旋转</strong>的 dq 坐标系。</p>
+
+                <p>只有当 d 轴精确对齐转子的永磁体方向（磁通方向）时，d 轴电流才纯粹产生磁通、q 轴电流才纯粹产生转矩，两者才真正解耦。一旦 θ 不准（比如用霍尔传感器只有 60° 分辨率），d/q 之间就会串扰，转矩出现脉动、效率下降——这正是高精度编码器对 FOC 至关重要的原因。</p>
+
+                <div class="callout">
+                    <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9c2.5 0 4.7 1 6.3 2.7"/><path d="M21 3v6h-6"/></svg></div>
+                    <p><strong>下一步：</strong>跳到「变换原理」标签，拖动电角度 θ 滑块，亲眼看到三相电流如何被 Clarke、Park 一步步变到 dq——这是理解整个 FOC 的钥匙。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================== TAB 2: TRANSFORMS ====================== -->
+        <section class="content-section" id="transforms-section">
+            <div class="transform-wrap">
+                <p class="lead">FOC 的全部数学，本质是<strong>三次坐标变换</strong>。下面把每一步都画出来：拖动「电角度 θ」滑块，或者点「自动旋转」让 θ 持续推进，观察三相电流、αβ 矢量、dq 旋转坐标系如何联动。</p>
+
+                <!-- Controller bar -->
+                <div class="canvas-box" style="margin-bottom:18px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+                    <div class="slider-row" style="flex:1; min-width:220px; margin:0;">
+                        <div class="slider-label">
+                            <span class="name">电角度 θ (electrical)</span>
+                            <span class="val" id="thetaVal">0°</span>
+                        </div>
+                        <input type="range" id="thetaSlider" min="0" max="360" value="0" step="1">
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="tfAutoBtn">▶ 自动旋转</button>
+                    <button class="btn btn-secondary btn-sm" id="tfResetBtn">↺ 复位</button>
+                    <label style="font-size:0.86em; color:var(--text-2); display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="tfCurrentMag" checked style="accent-color:var(--accent);"> 电流幅值 I = <span style="font-family:monospace; color:var(--accent); margin-left:4px;" id="tfImVal">1.0</span>
+                    </label>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;" class="tf-grid">
+                    <!-- (1) Three-phase currents -->
+                    <div class="canvas-box">
+                        <h4 style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block;"></span>
+                            三相电流 ia, ib, ic <span style="color:var(--text-3); font-weight:400; font-size:0.82em;">(随 θ 滚动)</span>
+                        </h4>
+                        <canvas id="cvThreePhase" width="460" height="200"></canvas>
+                        <div class="readout-grid">
+                            <div class="readout"><div class="k">ia</div><div class="v" id="rdIa">0.00</div></div>
+                            <div class="readout"><div class="k">ib</div><div class="v" id="rdIb">0.00</div></div>
+                            <div class="readout"><div class="k">ic</div><div class="v" id="rdIc">0.00</div></div>
+                        </div>
+                        <p style="font-size:0.82em; color:var(--text-3); margin:4px 0 0;">三相对称，幅值 <span class="math">I</span>，相位差 120°：<span class="math">i<span class="sub">a</span></span>=Icosθ，<span class="math">i<span class="sub">b</span></span>=Icos(θ−120°)，<span class="math">i<span class="sub">c</span></span>=Icos(θ+120°)。</p>
+                    </div>
+
+                    <!-- (2) Clarke transform -->
+                    <div class="canvas-box">
+                        <h4 style="margin-bottom:8px;">Clarke 变换 <span style="color:var(--text-3); font-weight:400; font-size:0.82em;">(abc → αβ)</span></h4>
+                        <canvas id="cvClarke" width="460" height="260"></canvas>
+                        <div class="readout-grid">
+                            <div class="readout"><div class="k">iα</div><div class="v" id="rdIalpha">0.00</div></div>
+                            <div class="readout"><div class="k">iβ</div><div class="v" id="rdIbeta">0.00</div></div>
+                            <div class="readout"><div class="k">|iαβ|</div><div class="v" id="rdImag">0.00</div></div>
+                        </div>
+                        <p style="font-size:0.82em; color:var(--text-3); margin:4px 0 0;">三相缩成两相正交：<span class="math">i<span class="sub">α</span></span>=ia，<span class="math">i<span class="sub">β</span></span>=<span class="frac"><span class="num">ia+2ib</span><span class="den">√3</span></span>。合成矢量长度恒定 = <span class="math"><span class="frac"><span class="num">3</span><span class="den">2</span></span>I</span>。</p>
+                    </div>
+
+                    <!-- (3) Park transform -->
+                    <div class="canvas-box">
+                        <h4 style="margin-bottom:8px;">Park 变换 <span style="color:var(--text-3); font-weight:400; font-size:0.82em;">(αβ → dq)</span></h4>
+                        <canvas id="cvPark" width="460" height="260"></canvas>
+                        <div class="readout-grid">
+                            <div class="readout"><div class="k">id</div><div class="v" id="rdId">0.00</div></div>
+                            <div class="readout"><div class="k">iq</div><div class="v" id="rdIq">0.00</div></div>
+                        </div>
+                        <p style="font-size:0.82em; color:var(--text-3); margin:4px 0 0;">把 αβ 矢量旋转 θ 到<strong>贴在转子上</strong>的 dq 系：<span class="math">i<span class="sub">d</span></span>=iαcosθ+iβsinθ，<span class="math">i<span class="sub">q</span></span>=−iαsinθ+iβcosθ。</p>
+                    </div>
+
+                    <!-- (4) Inverse chain -->
+                    <div class="canvas-box">
+                        <h4 style="margin-bottom:8px;">逆变换链 <span style="color:var(--text-3); font-weight:400; font-size:0.82em;">(dq → αβ → abc)</span></h4>
+                        <canvas id="cvInverse" width="460" height="260"></canvas>
+                        <p style="font-size:0.82em; color:var(--text-3); margin:4px 0 0;">控制目标：设 <span class="math">i<span class="sub">d</span></span><sup>*</sup>=0（不要多余磁通），<span class="math">i<span class="sub">q</span></span><sup>*</sup>=目标转矩。经反 Park 得 vαβ，再逆 Clarke 得三相调制电压 → SVPWM。</p>
+                    </div>
+                </div>
+
+                <div class="callout" style="margin-top:18px;">
+                    <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+                    <p><strong>看明白了？</strong>当 θ 自动旋转时，注意 <span class="math">i<span class="sub">d</span></span> 和 <span class="math">i<span class="sub">q</span></span> 变成 <strong>恒定的直流值</strong>——这正是 FOC 的精髓：在 dq 旋转系里，原本交流的电流变成了直流量，于是可以用普通的 PI 控制器精确调节，无需处理交流量。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================== TAB 3: SIMULATION ====================== -->
+        <section class="content-section" id="sim-section">
+            <div class="sim-wrap">
+                <p class="lead">这是一个 <strong>真实的 PMSM 物理仿真</strong>：左侧画布实时绘制定子磁场与转子，右侧控制面板调参，下方滚动波形显示转速与电流。完整的 FOC 闭环（Clarke → Park → 双 PI → 反 Park → 逆变器 → 电机方程）每一帧都在真实计算。</p>
+
+                <div class="sim-grid" style="display:grid; grid-template-columns: 1.1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <!-- Motor canvas -->
+                    <div class="canvas-box">
+                        <canvas id="cvMotor" width="480" height="480"></canvas>
+                    </div>
+                    <!-- Control panel -->
+                    <div class="canvas-box">
+                        <h4 style="margin-bottom:14px;">控制面板</h4>
+                        <div class="slider-row">
+                            <div class="slider-label"><span class="name">目标转速 ω* (机械 RPM)</span><span class="val" id="simSpdVal">600</span></div>
+                            <input type="range" id="simSpd" min="0" max="2000" value="600" step="10">
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-label"><span class="name">负载扭矩 T_load (N·m)</span><span class="val" id="simLoadVal">0.0</span></div>
+                            <input type="range" id="simLoad" min="0" max="3" value="0" step="0.05">
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-label"><span class="name">电流环 Kp</span><span class="val" id="simKpVal">1.50</span></div>
+                            <input type="range" id="simKp" min="0.1" max="6" value="1.5" step="0.05">
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-label"><span class="name">电流环 Ki</span><span class="val" id="simKiVal">80</span></div>
+                            <input type="range" id="simKi" min="5" max="400" value="80" step="5">
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-label"><span class="name">永磁磁链 λ_m (Wb)</span><span class="val" id="simFluxVal">0.05</span></div>
+                            <input type="range" id="simFlux" min="0.01" max="0.12" value="0.05" step="0.005">
+                        </div>
+
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
+                            <button class="btn btn-primary btn-sm" id="simPlayBtn">⏸ 暂停</button>
+                            <button class="btn btn-secondary btn-sm" id="simResetBtn">↺ 重置</button>
+                            <button class="btn btn-secondary btn-sm" id="simKickBtn">⚡ 施加扰动</button>
+                        </div>
+
+                        <div class="readout-grid" style="margin-top:16px;">
+                            <div class="readout"><div class="k">实际 RPM</div><div class="v" id="rdRpm">0</div></div>
+                            <div class="readout"><div class="k">转矩 Te (N·m)</div><div class="v" id="rdTe">0.00</div></div>
+                            <div class="readout"><div class="k">iq (A)</div><div class="v" id="rdSimIq">0.00</div></div>
+                            <div class="readout"><div class="k">id (A)</div><div class="v" id="rdSimId">0.00</div></div>
+                        </div>
+                        <p style="font-size:0.8em; color:var(--text-3); margin-top:12px; line-height:1.5;">
+                            <strong>试试：</strong>把目标转速拉到 1200，观察转子加速；把 <code>Kp</code> 拉到 5+ 看转速振荡；按下「施加扰动」模拟突加负载，看 FOC 如何把转速拉回。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Waveforms -->
+                <div class="canvas-box">
+                    <h4 style="margin-bottom:8px;">实时波形 <span style="color:var(--text-3); font-weight:400; font-size:0.82em;">(转速 / Iq / Id)</span></h4>
+                    <canvas id="cvWave" width="920" height="220"></canvas>
+                    <div class="legend" style="margin-top:8px;">
+                        <span><i style="background:var(--accent)"></i>实际转速</span>
+                        <span><i style="background:var(--text-3)"></i>目标转速</span>
+                        <span><i style="background:var(--axis-q)"></i>Iq (转矩电流)</span>
+                        <span><i style="background:var(--axis-d)"></i>Id (磁通电流, 应≈0)</span>
+                    </div>
+                </div>
+
+                <div class="callout" style="margin-top:16px;">
+                    <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg></div>
+                    <p><strong>电机模型</strong>：表贴式 PMSM（SPMSM），极对数 p=4。转矩 <span class="math">T<span class="sub">e</span></span>=1.5·p·λ<span class="sub">m</span>·i<span class="sub">q</span>；机械方程 <span class="math">J·dω/dt = T<span class="sub">e</span></span>−T<span class="sub">load</span>−B·ω。电流环在 dq 旋转系内闭环，电压经反 Park + 逆 Clarke + SVPWM（归一化限幅）驱动三相电流。</p>
+                </div>
+                <div id="simDbg" style="display:none;"></div>
+            </div>
+        </section>
+
+        <!-- ====================== TAB 4: TUNING ====================== -->
+        <section class="content-section" id="tuning-section">
+            <div class="tuning-wrap">
+                <p class="lead">PI 控制器是 FOC 的"肌肉"。选一个预设场景，参数会自动设好并启动仿真——观察波形里转速、Iq 的典型现象，建立调参的<strong>物理直觉</strong>。</p>
+
+                <h4 style="margin-bottom:12px;">预设场景</h4>
+                <div class="scenario-grid" id="scenarioGrid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:24px;"></div>
+
+                <div class="canvas-box" style="margin-bottom:18px;">
+                    <h4 style="margin-bottom:8px;">实时波形 <span style="color:var(--text-3); font-weight:400; font-size:0.82em;">(与仿真页共享同一台电机)</span></h4>
+                    <canvas id="cvTuneWave" width="920" height="180"></canvas>
+                    <div class="legend" style="margin-top:8px;">
+                        <span><i style="background:var(--accent)"></i>实际转速</span>
+                        <span><i style="background:var(--text-3)"></i>目标转速</span>
+                        <span><i style="background:var(--axis-q)"></i>Iq</span>
+                    </div>
+                </div>
+
+                <div class="readout-grid" style="margin-bottom:24px;">
+                    <div class="readout"><div class="k">当前 Kp</div><div class="v" id="tuneKp">1.50</div></div>
+                    <div class="readout"><div class="k">当前 Ki</div><div class="v" id="tuneKi">80</div></div>
+                    <div class="readout"><div class="k">目标 RPM</div><div class="v" id="tuneRpm">600</div></div>
+                    <div class="readout"><div class="k">实际 RPM</div><div class="v" id="tuneActRpm">0</div></div>
+                </div>
+
+                <h4 style="margin-bottom:12px;">调参口诀</h4>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 12h4l3-9 6 18 3-9h4"/></svg></div>
+                        <h4>看到振荡 → 降 Kp</h4>
+                        <p>转速在目标值上下反复冲过又跌回，像弹簧一样停不下来。说明比例增益太激进，反馈过强。把 Kp 调小，振荡会减弱。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                        <h4>响应太慢 → 升 Kp</h4>
+                        <p>转速爬向目标像蜗牛，半天到不了。说明比例作用不足。适度调大 Kp，加快响应——但注意别大到振荡。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/></svg></div>
+                        <h4>稳态有静差 → 升 Ki</h4>
+                        <p>转速稳定了，但总差那么一点到不了目标值（尤其有负载时）。这是积分作用不够。调大 Ki 消除静差。</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="4"/></svg></div>
+                        <h4>超调严重 → 降 Ki</h4>
+                        <p>转速冲过目标一大截才慢慢回来，像刹车不住。积分累积太快。适当调小 Ki，减少超调。</p>
+                    </div>
+                </div>
+
+                <div class="callout" style="margin-top:18px;">
+                    <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9c2.5 0 4.7 1 6.3 2.7"/><path d="M21 3v6h-6"/></svg></div>
+                    <p><strong>实践出真知：</strong>这些口诀只是起点。真实电机调参还受采样率、噪声、延迟影响。本仿真用的模型是理想 SPMSM，<strong>先在这里建立直觉，再到实际台架上微调</strong>。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================== TAB 5: QUIZ ====================== -->
+        <section class="content-section" id="quiz-section">
+            <div>
+                <p class="lead">12 道题检验你对 FOC 的理解。每题选完立即看到对错与解析，最后给出总分。</p>
+                <div id="quizArea">
+                    <div class="quiz-progress" id="quizProgress"></div>
+                    <div id="quizQuestion"></div>
+                    <div class="quiz-feedback" id="quizFeedback"></div>
+                </div>
+                <div id="quizResults" style="display:none; text-align:center; padding:24px 0;">
+                    <h3 style="font-size:1.4em; margin-bottom:8px;">测验完成</h3>
+                    <p style="font-size:3em; font-weight:700; color:var(--accent); margin:12px 0;">
+                        <span id="quizScore">0</span><span style="color:var(--text-3); font-size:0.5em;">/</span><span id="quizTotal">12</span>
+                    </p>
+                    <p style="color:var(--text-2); margin-bottom:20px;">正确率 <span id="quizPct">0</span>%</p>
+                    <p id="quizVerdict" style="margin-bottom:20px;"></p>
+                    <button class="btn btn-primary" id="quizRestart">↺ 再来一次</button>
+                </div>
+            </div>
+        </section>
+
+        <footer class="site-footer">
+            <div class="footer-inner">
+                <div>
+                    <span class="footer-brand">Visual FOC</span>
+                    <span class="footer-copy"> &middot; &copy; 2026 &middot; 让 FOC 电机控制学习更直观</span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/turinglambdaai/visual-foc" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://github.com/turinglambdaai/visual-foc/blob/main/LICENSE">Apache 2.0</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        /* ====================================================================
+           Visual FOC — Base JS (theme + tab switching)
+           ==================================================================== */
+        var VF = window.VF || {};
+        window.VF = VF;
+        (function () {
+            function getPreferredTheme() {
+                var stored = localStorage.getItem('vf-theme');
+                if (stored) return stored;
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            function applyTheme(theme) { document.body.setAttribute('data-theme', theme); }
+            function toggleTheme() {
+                var current = document.body.getAttribute('data-theme') || getPreferredTheme();
+                var next = current === 'dark' ? 'light' : 'dark';
+                applyTheme(next);
+                localStorage.setItem('vf-theme', next);
+            }
+
+            /* ---- Tab switching ---- */
+            // Multiple engines subscribe via VF.onTabSwitch(fn). Each is notified
+            // on every switch and decides for itself whether to start/stop.
+            VF._tabListeners = VF._tabListeners || [];
+            VF.onTabSwitch = function (fn) { VF._tabListeners.push(fn); };
+            function switchTab(name) {
+                document.querySelectorAll('.tab-button').forEach(function (b) {
+                    b.classList.toggle('active', b.dataset.tab === name);
+                });
+                document.querySelectorAll('.content-section').forEach(function (s) {
+                    s.classList.toggle('active', s.id === name + '-section');
+                });
+                VF._tabListeners.forEach(function (fn) { try { fn(name); } catch (e) {} });
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                applyTheme(getPreferredTheme());
+                var btn = document.getElementById('themeToggle');
+                if (btn) btn.addEventListener('click', toggleTheme);
+
+                document.querySelectorAll('.tab-button').forEach(function (b) {
+                    b.addEventListener('click', function () { switchTab(b.dataset.tab); });
+                });
+            });
+        })();
+
+        /* ====================================================================
+           Visual FOC — Shared math (Clarke / Park / inverse)
+           Angles in radians. Currents are per-unit unless noted.
+           ==================================================================== */
+        VF.DEG = Math.PI / 180;
+        VF.RAD2DEG = 180 / Math.PI;
+        VF.TWO_PI_3 = (2 * Math.PI) / 3;          // 120°
+        VF.SQRT3 = Math.sqrt(3);
+
+        // Three-phase currents from angle theta (rad) and amplitude I.
+        VF.threePhase = function (theta, I) {
+            return {
+                a: I * Math.cos(theta),
+                b: I * Math.cos(theta - VF.TWO_PI_3),
+                c: I * Math.cos(theta + VF.TWO_PI_3)
+            };
+        };
+        // Clarke (power-invariant form): abc -> alpha-beta
+        VF.clarke = function (ia, ib, ic) {
+            return {
+                alpha: ia,
+                beta: (ia + 2 * ib) / VF.SQRT3   // = (ib - ic)/sqrt3 ; equivalent when balanced
+            };
+        };
+        // Park: alpha-beta -> d-q, rotating by theta
+        VF.park = function (alpha, beta, theta) {
+            var c = Math.cos(theta), s = Math.sin(theta);
+            return { d: alpha * c + beta * s, q: -alpha * s + beta * c };
+        };
+        // Inverse Park: d-q -> alpha-beta
+        VF.invPark = function (d, q, theta) {
+            var c = Math.cos(theta), s = Math.sin(theta);
+            return { alpha: d * c - q * s, beta: d * s + q * c };
+        };
+        // Inverse Clarke: alpha-beta -> abc (sum-zero)
+        VF.invClarke = function (alpha, beta) {
+            return { a: alpha, b: -0.5 * alpha + (VF.SQRT3 / 2) * beta, c: -0.5 * alpha - (VF.SQRT3 / 2) * beta };
+        };
+
+        // Read CSS variable (for canvas colors that follow theme)
+        VF.css = function (name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        };
+
+        /* ====================================================================
+           Visual FOC — Tab 2: Transforms visualization
+           ==================================================================== */
+        (function () {
+            var state = { thetaDeg: 0, I: 1.0, auto: false, raf: 0, last: 0, speed: 90 /* deg/s */ };
+            var els = {};
+
+            function $(id) { return document.getElementById(id); }
+
+            function init() {
+                els.slider = $('thetaSlider'); els.thetaVal = $('thetaVal');
+                els.autoBtn = $('tfAutoBtn'); els.resetBtn = $('tfResetBtn');
+                els.imCheck = $('tfCurrentMag'); els.imVal = $('tfImVal');
+                els.rdIa = $('rdIa'); els.rdIb = $('rdIb'); els.rdIc = $('rdIc');
+                els.rdIalpha = $('rdIalpha'); els.rdIbeta = $('rdIbeta'); els.rdimag = $('rdImag');
+                els.rdId = $('rdId'); els.rdIq = $('rdIq');
+                els.cv3 = $('cvThreePhase'); els.cvC = $('cvClarke');
+                els.cvP = $('cvPark'); els.cvI = $('cvInverse');
+
+                els.slider.addEventListener('input', function () {
+                    state.thetaDeg = +els.slider.value;
+                    state.auto = false; els.autoBtn.textContent = '▶ 自动旋转';
+                    update();
+                });
+                els.autoBtn.addEventListener('click', function () {
+                    state.auto = !state.auto;
+                    els.autoBtn.textContent = state.auto ? '⏸ 暂停' : '▶ 自动旋转';
+                    state.last = performance.now();
+                    if (state.auto) loop();
+                });
+                els.resetBtn.addEventListener('click', function () {
+                    state.thetaDeg = 0; state.auto = false;
+                    els.autoBtn.textContent = '▶ 自动旋转';
+                    els.slider.value = 0;
+                    update();
+                });
+
+                update();
+            }
+
+            function loop(now) {
+                if (!state.auto) return;
+                now = now || performance.now();
+                var dt = (now - state.last) / 1000; state.last = now;
+                state.thetaDeg = (state.thetaDeg + state.speed * dt) % 360;
+                els.slider.value = Math.round(state.thetaDeg);
+                update();
+                state.raf = requestAnimationFrame(loop);
+            }
+
+            function update() {
+                var th = state.thetaDeg * VF.DEG;
+                var I = state.I;
+                var i3 = VF.threePhase(th, I);
+                var ab = VF.clarke(i3.a, i3.b, i3.c);
+                var dq = VF.park(ab.alpha, ab.beta, th);
+
+                els.thetaVal.textContent = Math.round(state.thetaDeg) + '°';
+                els.imVal.textContent = I.toFixed(1);
+                els.rdIa.textContent = i3.a.toFixed(2);
+                els.rdIb.textContent = i3.b.toFixed(2);
+                els.rdIc.textContent = i3.c.toFixed(2);
+                els.rdIalpha.textContent = ab.alpha.toFixed(2);
+                els.rdIbeta.textContent = ab.beta.toFixed(2);
+                els.rdimag.textContent = Math.hypot(ab.alpha, ab.beta).toFixed(2);
+                els.rdId.textContent = dq.d.toFixed(2);
+                els.rdIq.textContent = dq.q.toFixed(2);
+
+                drawThreePhase(i3, th);
+                drawClarke(i3, ab);
+                drawPark(ab, dq, th);
+                drawInverse(dq, th);
+            }
+
+            // helper: get a canvas 2d context with crisp scaling
+            function ctx2d(canvas) {
+                var dpr = window.devicePixelRatio || 1;
+                var w = canvas.width, h = canvas.height;
+                if (canvas._dpr !== dpr || canvas._w !== w) {
+                    canvas._dpr = dpr; canvas._w = w;
+                    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+                    canvas.width = w * dpr; canvas.height = h * dpr;
+                }
+                var ctx = canvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                return ctx;
+            }
+
+            function drawAxes(ctx, cx, cy, scale, label) {
+                var cA = VF.css('--phase-a');
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cx - scale - 14, cy); ctx.lineTo(cx + scale + 14, cy);
+                ctx.moveTo(cx, cy - scale - 14); ctx.lineTo(cx, cy + scale + 14);
+                ctx.stroke();
+                // A axis highlighted
+                ctx.strokeStyle = cA; ctx.lineWidth = 1.2;
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + scale + 14, cy); ctx.stroke();
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '11px Inter, sans-serif';
+                ctx.fillText(label || 'α', cx + scale + 18, cy + 4);
+            }
+
+            function arrow(ctx, x1, y1, x2, y2, color, w) {
+                ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w || 2.2;
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                var a = Math.atan2(y2 - y1, x2 - x1), hl = 8;
+                ctx.beginPath();
+                ctx.moveTo(x2, y2);
+                ctx.lineTo(x2 - hl * Math.cos(a - 0.4), y2 - hl * Math.sin(a - 0.4));
+                ctx.lineTo(x2 - hl * Math.cos(a + 0.4), y2 - hl * Math.sin(a + 0.4));
+                ctx.closePath(); ctx.fill();
+            }
+
+            // (1) Three-phase scrolling waveforms
+            function drawThreePhase(i3, th) {
+                var cv = els.cv3, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var mid = H / 2, amp = H * 0.36;
+                // grid
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, mid); ctx.lineTo(W, mid);
+                ctx.stroke();
+                // the three curves over a full electrical cycle, with a marker at theta
+                var phases = [['a', VF.css('--phase-a')], ['b', VF.css('--phase-b')], ['c', VF.css('--phase-c')]];
+                phases.forEach(function (p) {
+                    ctx.strokeStyle = p[1]; ctx.lineWidth = 2; ctx.beginPath();
+                    for (var x = 0; x <= W; x++) {
+                        var deg = (x / W) * 360;
+                        var val;
+                        if (p[0] === 'a') val = Math.cos(deg * VF.DEG);
+                        else if (p[0] === 'b') val = Math.cos((deg - 120) * VF.DEG);
+                        else val = Math.cos((deg + 120) * VF.DEG);
+                        var y = mid - val * amp;
+                        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                });
+                // theta marker line + sample dots
+                var mx = (state.thetaDeg / 360) * W;
+                ctx.strokeStyle = VF.css('--accent'); ctx.lineWidth = 1.4; ctx.setLineDash([4, 3]);
+                ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, H); ctx.stroke(); ctx.setLineDash([]);
+                var dots = [['a', i3.a, VF.css('--phase-a')], ['b', i3.b, VF.css('--phase-b')], ['c', i3.c, VF.css('--phase-c')]];
+                dots.forEach(function (d) {
+                    ctx.fillStyle = d[2];
+                    ctx.beginPath(); ctx.arc(mx, mid - d[1] * amp, 4, 0, VF.TWO_PI); ctx.fill();
+                });
+                // labels
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('0°', 4, H - 4); ctx.fillText('360°', W - 26, H - 4);
+            }
+
+            // (2) Clarke: 3 axis arrows (120°) summing to alpha-beta
+            function drawClarke(i3, ab) {
+                var cv = els.cvC, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var cx = W / 2, cy = H / 2, scale = Math.min(W, H) * 0.34;
+                drawAxes(ctx, cx, cy, scale, 'α');
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '11px Inter, sans-serif';
+                ctx.fillText('β', cx - 16, cy - scale - 8);
+
+                // three phase axes at 0, 120, 240 (A along +alpha)
+                var axes = [['a', 0, VF.css('--phase-a')], ['b', -120, VF.css('--phase-b')], ['c', 120, VF.css('--phase-c')]];
+                axes.forEach(function (ax) {
+                    var ang = ax[1] * VF.DEG;
+                    var ex = cx + Math.cos(ang) * (scale + 6), ey = cy - Math.sin(ang) * (scale + 6);
+                    ctx.strokeStyle = VF.css('--text-3'); ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+                    ctx.fillStyle = ax[2];
+                    // current vector along this axis (note: y inverted)
+                    var mag = 0;
+                    if (ax[0] === 'a') mag = i3.a; else if (ax[0] === 'b') mag = i3.b; else mag = i3.c;
+                    var vx = cx + Math.cos(ang) * mag * scale, vy = cy - Math.sin(ang) * mag * scale;
+                    if (Math.abs(mag) > 0.01) arrow(ctx, cx, cy, vx, vy, ax[2], 2);
+                    ctx.font = 'bold 11px Inter, sans-serif';
+                    ctx.fillText(ax[0], ex + 3, ey);
+                });
+                // resultant alpha-beta vector
+                arrow(ctx, cx, cy, cx + ab.alpha * scale, cy - ab.beta * scale, VF.css('--accent'), 3);
+                ctx.fillStyle = VF.css('--accent'); ctx.font = 'bold 11px Inter, sans-serif';
+                ctx.fillText('iαβ', cx + ab.alpha * scale + 6, cy - ab.beta * scale - 4);
+            }
+
+            // (3) Park: alpha-beta (static, faded) + dq rotating frame + vector
+            function drawPark(ab, dq, th) {
+                var cv = els.cvP, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var cx = W / 2, cy = H / 2, scale = Math.min(W, H) * 0.34;
+                // static alpha-beta axes (faded)
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cx - scale - 14, cy); ctx.lineTo(cx + scale + 14, cy);
+                ctx.moveTo(cx, cy - scale - 14); ctx.lineTo(cx, cy + scale + 14);
+                ctx.stroke();
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('α', cx + scale + 16, cy + 3); ctx.fillText('β', cx - 14, cy - scale - 8);
+
+                // alpha-beta vector (the thing being rotated) — faded
+                ctx.globalAlpha = 0.35;
+                arrow(ctx, cx, cy, cx + ab.alpha * scale, cy - ab.beta * scale, VF.css('--accent'), 2);
+                ctx.globalAlpha = 1;
+
+                // rotating dq axes (rotated by theta)
+                var c = Math.cos(th), s = Math.sin(th);
+                ctx.strokeStyle = VF.css('--axis-d'); ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(cx - c * (scale + 12), cy + s * (scale + 12));
+                ctx.lineTo(cx + c * (scale + 12), cy - s * (scale + 12));
+                ctx.stroke();
+                ctx.strokeStyle = VF.css('--axis-q');
+                ctx.beginPath();
+                ctx.moveTo(cx + s * (scale + 12), cy + c * (scale + 12));
+                ctx.lineTo(cx - s * (scale + 12), cy - c * (scale + 12));
+                ctx.stroke();
+                ctx.fillStyle = VF.css('--axis-d'); ctx.font = 'bold 12px Inter, sans-serif';
+                ctx.fillText('d', cx + c * (scale + 16), cy - s * (scale + 16) + 4);
+                ctx.fillStyle = VF.css('--axis-q');
+                ctx.fillText('q', cx - s * (scale + 16) - 4, cy - c * (scale + 16));
+
+                // projected dq vector (in dq frame, drawn from origin)
+                // d along the d-axis direction, q along q-axis direction
+                arrow(ctx, cx, cy, cx + c * dq.d * scale - s * dq.q * scale,
+                    cy - s * dq.d * scale - c * dq.q * scale, VF.css('--accent'), 3);
+            }
+
+            // (4) Inverse chain: target dq* -> alpha-beta -> abc bars
+            function drawInverse(dq, th) {
+                var cv = els.cvI, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                // show the synthesized three-phase voltages (using inv Park + inv Clarke with target id*=0, iq*=I)
+                var I = state.I;
+                var ab = VF.invPark(0, I, th);          // id*=0, iq*=I
+                var v3 = VF.invClarke(ab.alpha, ab.beta);
+                // bar chart of va, vb, vc
+                var labels = [['va', v3.a, VF.css('--phase-a')], ['vb', v3.b, VF.css('--phase-b')], ['vc', v3.c, VF.css('--phase-c')]];
+                var pad = 36, bw = (W - pad * 2) / 3 * 0.6, gap = (W - pad * 2) / 3;
+                var mid = H - 36, amp = (H - 60) * 0.42;
+                // zero line
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(pad - 8, mid); ctx.lineTo(W - pad + 8, mid); ctx.stroke();
+                labels.forEach(function (l, i) {
+                    var x = pad + i * gap + (gap - bw) / 2;
+                    var h = l[1] * amp;
+                    ctx.fillStyle = l[2];
+                    if (h >= 0) ctx.fillRect(x, mid - h, bw, h);
+                    else ctx.fillRect(x, mid, bw, -h);
+                    ctx.fillStyle = VF.css('--text-2'); ctx.font = '11px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(l[0], x + bw / 2, H - 14);
+                    ctx.fillStyle = l[2]; ctx.font = 'bold 10px "SF Mono", monospace';
+                    ctx.fillText(l[1].toFixed(2), x + bw / 2, (h >= 0 ? mid - h - 6 : mid - h - 6));
+                });
+                ctx.textAlign = 'left';
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '10.5px Inter, sans-serif';
+                ctx.fillText('目标: id*=0, iq*=' + I.toFixed(1) + ' → 反Park → 逆Clarke → 三相调制电压', pad - 4, 18);
+            }
+
+            // init when DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else { init(); }
+        })();
+
+        /* ====================================================================
+           Visual FOC — Shared PMSM simulation engine
+           Used by Tab 3 (Simulation) and Tab 4 (Tuning).
+           Surface-mounted PMSM (SPMSM): Ld == Lq == Ls.
+           Electrical integration done in the dq rotating frame for stability.
+           ==================================================================== */
+        VF.PMSM = (function () {
+            // default motor parameters (per-unit-ish, tuned for visible dynamics)
+            var P = {
+                p: 4,          // pole pairs
+                Rs: 0.5,       // stator resistance (Ω)
+                Ls: 0.0015,    // stator inductance (H) — Ld = Lq = Ls (SPMSM)
+                lambda_m: 0.05,// permanent-magnet flux linkage (Wb)
+                J: 0.0005,     // rotor inertia (kg·m²)
+                B: 0.0002,     // viscous friction (N·m·s)
+                Vdc: 24,       // DC bus voltage (V) — for saturation/limit
+                Kt: 0          // derived torque constant = 1.5*p*lambda_m
+            };
+            function recompute() { P.Kt = 1.5 * P.p * P.lambda_m; }
+            recompute();
+
+            // simulation state
+            var S = {
+                theta_e: 0,    // electrical angle (rad)
+                omega_m: 0,    // mechanical speed (rad/s)
+                id: 0, iq: 0,  // dq currents (A)
+                // controller outputs
+                vd: 0, vq: 0,
+                Te: 0,
+                // references (set by caller)
+                speedRef: 0,   // mechanical rad/s
+                loadTorque: 0, // N·m
+                kp: 1.5, ki: 80,
+                // external hooks
+                onTe: null
+            };
+
+            // two PI controllers (id->0, iq->ref). output clamped to voltage.
+            // Gains are instance properties (this.kp / this.ki) so they can be
+            // updated live from the slider without recreating the controller.
+            function makePI(kp, ki, vmax, vmin) {
+                return {
+                    i: 0,
+                    kp: kp,
+                    ki: ki,
+                    reset: function () { this.i = 0; },
+                    run: function (err, dt) {
+                        this.i += err * dt;
+                        // anti-windup clamp
+                        var u = this.kp * err + this.ki * this.i;
+                        var lo = (vmin == null ? -vmax : vmin);
+                        if (u > vmax) { u = vmax; this.i -= err * dt * 0.5; }
+                        else if (u < lo) { u = lo; this.i -= err * dt * 0.5; }
+                        return u;
+                    }
+                };
+            }
+            var piD = makePI(S.kp, S.ki, P.Vdc / 1.732);
+            var piQ = makePI(S.kp, S.ki, P.Vdc / 1.732);
+
+            // speed->iq reference: outer loop (PI, since current loop is fast)
+            var speedPI = makePI(0.18, 1.2, 40);
+
+            function reset() {
+                S.theta_e = 0; S.omega_m = 0; S.id = 0; S.iq = 0;
+                S.vd = 0; S.vq = 0; S.Te = 0;
+                piD.reset(); piQ.reset(); speedPI.reset();
+            }
+
+            // advance simulation by dt seconds. Returns nothing; reads S.
+            function step(dt) {
+                // clamp dt to avoid instability on tab switches
+                if (dt > 0.002) dt = 0.002;
+                var omega_e = S.omega_m * P.p;
+
+                // --- outer: speed loop -> iq reference (N·m demand -> A) ---
+                var speedErr = S.speedRef - S.omega_m;
+                var TeDemand = speedPI.run(speedErr, dt);
+                var iqRef = TeDemand / P.Kt;          // T = Kt*iq
+                // clamp iq to a realistic range
+                var IQ_MAX = 40;
+                if (iqRef > IQ_MAX) iqRef = IQ_MAX;
+                if (iqRef < -IQ_MAX) iqRef = -IQ_MAX;
+
+                // --- inner: current loop in dq ---
+                // sync PI gains with slider state
+                piD.kp = piQ.kp = S.kp; piD.ki = piQ.ki = S.ki;
+                var idRef = 0;
+                var vd_cmd = piD.run(idRef - S.id, dt);
+                var vq_cmd = piQ.run(iqRef - S.iq, dt);
+
+                // back-EMF coupling (dq voltage equations):
+                //   vd = Rs*id + Ls*did/dt - omega_e*Ls*iq
+                //   vq = Rs*iq + Ls*diq/dt + omega_e*Ls*id + omega_e*lambda_m
+                // solve for did/dt, diq/dt:
+                var did_dt = (vd_cmd - P.Rs * S.id + omega_e * P.Ls * S.iq) / P.Ls;
+                var diq_dt = (vq_cmd - P.Rs * S.iq - omega_e * P.Ls * S.id - omega_e * P.lambda_m) / P.Ls;
+
+                S.id += did_dt * dt;
+                S.iq += diq_dt * dt;
+                S.vd = vd_cmd; S.vq = vq_cmd;
+
+                // --- torque & mechanical ---
+                S.Te = P.Kt * S.iq;
+                var domega = (S.Te - S.loadTorque - P.B * S.omega_m) / P.J;
+                S.omega_m += domega * dt;
+                if (S.omega_m < 0) S.omega_m = 0;     // no negative direction in this demo
+                S.theta_e = (S.theta_e + omega_e * dt) % (2 * Math.PI);
+
+                if (S.onTe) S.onTe(S.Te);
+            }
+
+            // read out three-phase currents for visualization (via inverse transforms)
+            function phaseCurrents() {
+                var ab = VF.invPark(S.id, S.iq, S.theta_e);
+                var v3 = VF.invClarke(ab.alpha, ab.beta);
+                return v3;
+            }
+
+            return {
+                P: P, S: S,
+                setFlux: function (lm) { P.lambda_m = lm; recompute(); },
+                reset: reset,
+                step: step,
+                phaseCurrents: phaseCurrents,
+                rpm: function () { return S.omega_m * 60 / (2 * Math.PI); }
+            };
+        })();
+
+        /* ====================================================================
+           Visual FOC — Tab 3: Simulation driver + rendering
+           ==================================================================== */
+        (function () {
+            var els = {};
+            var running = false, raf = 0;   // running = whether the RAF loop is active
+            var userPaused = false;         // user explicitly paused via the button
+            // waveform history (rolling)
+            var HIST = 320;
+            var hist = { rpm: [], ref: [], iq: [], id: [] };
+            var kickTimer = 0;
+
+            function $(id) { return document.getElementById(id); }
+
+            function init() {
+                els.cvM = $('cvMotor'); els.cvW = $('cvWave');
+                els.simSpd = $('simSpd'); els.simLoad = $('simLoad');
+                els.simKp = $('simKp'); els.simKi = $('simKi'); els.simFlux = $('simFlux');
+                els.simSpdVal = $('simSpdVal'); els.simLoadVal = $('simLoadVal');
+                els.simKpVal = $('simKpVal'); els.simKiVal = $('simKiVal'); els.simFluxVal = $('simFluxVal');
+                els.playBtn = $('simPlayBtn'); els.resetBtn = $('simResetBtn'); els.kickBtn = $('simKickBtn');
+                els.rdRpm = $('rdRpm'); els.rdTe = $('rdTe'); els.rdSimIq = $('rdSimIq'); els.rdSimId = $('rdSimId');
+
+                // slider wiring
+                els.simSpd.addEventListener('input', function () {
+                    els.simSpdVal.textContent = this.value;
+                    VF.PMSM.S.speedRef = (+this.value) * 2 * Math.PI / 60;
+                });
+                els.simLoad.addEventListener('input', function () {
+                    els.simLoadVal.textContent = (+this.value).toFixed(2);
+                    VF.PMSM.S.loadTorque = +this.value;
+                });
+                els.simKp.addEventListener('input', function () {
+                    els.simKpVal.textContent = (+this.value).toFixed(2);
+                    VF.PMSM.S.kp = +this.value;
+                });
+                els.simKi.addEventListener('input', function () {
+                    els.simKiVal.textContent = this.value;
+                    VF.PMSM.S.ki = +this.value;
+                });
+                els.simFlux.addEventListener('input', function () {
+                    els.simFluxVal.textContent = (+this.value).toFixed(3);
+                    VF.PMSM.setFlux(+this.value);
+                });
+
+                els.playBtn.addEventListener('click', function () {
+                    userPaused = !userPaused;
+                    els.playBtn.textContent = userPaused ? '▶ 运行' : '⏸ 暂停';
+                    if (!userPaused) start(); else stop();
+                });
+                els.resetBtn.addEventListener('click', function () {
+                    VF.PMSM.reset();
+                    hist.rpm.length = 0; hist.ref.length = 0; hist.iq.length = 0; hist.id.length = 0;
+                });
+                els.kickBtn.addEventListener('click', function () {
+                    VF.PMSM.S.loadTorque = (VF.PMSM.S.loadTorque || 0) + 2.0;
+                    kickTimer = 1.2; // seconds of extra load
+                });
+
+                // init references
+                VF.PMSM.S.speedRef = (+els.simSpd.value) * 2 * Math.PI / 60;
+                VF.PMSM.S.kp = +els.simKp.value;
+                VF.PMSM.S.ki = +els.simKi.value;
+                VF.PMSM.setFlux(+els.simFlux.value);
+
+                // start/stop driven by tab visibility (see VF.onTabSwitch below)
+            }
+
+            function start() {
+                if (running) return;
+                running = true;
+                loop(performance.now());
+            }
+            function stop() {
+                running = false;
+                if (raf) { cancelAnimationFrame(raf); raf = 0; }
+            }
+
+            function loop(now) {
+                if (!running) return;
+                try {
+                    var dt = (now - (loop._last || now)) / 1000; loop._last = now;
+                    if (kickTimer > 0) { kickTimer -= dt; if (kickTimer <= 0) VF.PMSM.S.loadTorque = +els.simLoad.value; }
+                    // fixed-step physics substepping for stability (run multiple small steps)
+                    var steps = 8, h = dt / steps;
+                    for (var i = 0; i < steps; i++) VF.PMSM.step(h);
+                    // record history
+                    var rpm = VF.PMSM.rpm();
+                    hist.rpm.push(rpm);
+                    hist.ref.push(+els.simSpd.value);
+                    hist.iq.push(VF.PMSM.S.iq);
+                    hist.id.push(VF.PMSM.S.id);
+                    while (hist.rpm.length > HIST) { hist.rpm.shift(); hist.ref.shift(); hist.iq.shift(); hist.id.shift(); }
+                    render();
+                    raf = requestAnimationFrame(loop);
+                } catch (e) {
+                    var dbg = document.getElementById('simDbg');
+                    if (dbg) { dbg.style.display = 'block'; dbg.textContent = '仿真错误: ' + (e && e.message || e); }
+                    stop();
+                    if (els.playBtn) els.playBtn.textContent = '▶ 运行';
+                    userPaused = true;
+                }
+            }
+
+            function ctx2d(canvas) {
+                var dpr = window.devicePixelRatio || 1;
+                var w = canvas.width, h = canvas.height;
+                if (canvas._dpr !== dpr || canvas._w !== w) {
+                    canvas._dpr = dpr; canvas._w = w;
+                    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+                    canvas.width = w * dpr; canvas.height = h * dpr;
+                }
+                var ctx = canvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                return ctx;
+            }
+
+            function render() {
+                drawMotor();
+                drawWave();
+                // readouts
+                els.rdRpm.textContent = Math.round(VF.PMSM.rpm());
+                els.rdTe.textContent = VF.PMSM.S.Te.toFixed(2);
+                els.rdSimIq.textContent = VF.PMSM.S.iq.toFixed(2);
+                els.rdSimId.textContent = VF.PMSM.S.id.toFixed(2);
+            }
+
+            function drawMotor() {
+                var cv = els.cvM, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.42;
+
+                // stator iron (ring)
+                ctx.strokeStyle = VF.css('--border'); ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(cx, cy, R, 0, VF.TWO_PI); ctx.stroke();
+                ctx.beginPath(); ctx.arc(cx, cy, R * 0.72, 0, VF.TWO_PI); ctx.stroke();
+
+                // three-phase windings (A at 0°, B at 120°, C at 240° — drawn as colored arcs at 3 stator slots)
+                var i3 = VF.PMSM.phaseCurrents();
+                var amps = { a: i3.a, b: i3.b, c: i3.c };
+                var cols = { a: VF.css('--phase-a'), b: VF.css('--phase-b'), c: VF.css('--phase-c') };
+                var dirA = { a: 0, b: VF.TWO_PI_3, c: -VF.TWO_PI_3 };
+                ['a', 'b', 'c'].forEach(function (ph) {
+                    var ang = dirA[ph];
+                    var I = amps[ph];
+                    // two slots per phase: +current enters at ang, returns at ang+180
+                    drawCoil(ctx, cx, cy, R * 0.86, ang, I, cols[ph], ph.toUpperCase());
+                    drawCoil(ctx, cx, cy, R * 0.86, ang + Math.PI, -I, cols[ph], '');
+                });
+
+                // airgap flux vector from currents (alpha-beta of stator current)
+                var ab = VF.invPark(VF.PMSM.S.id, VF.PMSM.S.iq, VF.PMSM.S.theta_e);
+                // scale: currents can be large, normalize
+                var fmag = Math.min(Math.hypot(ab.alpha, ab.beta) / 20, 1) * R * 0.6;
+                var fang = Math.atan2(-ab.beta, ab.alpha); // canvas y-down
+                if (fmag > 2) {
+                    arrow(ctx, cx, cy, cx + Math.cos(fang) * fmag, cy + Math.sin(fang) * fmag, VF.css('--accent'), 3);
+                    ctx.fillStyle = VF.css('--accent'); ctx.font = 'bold 11px Inter, sans-serif';
+                    ctx.fillText('定子磁势', cx + Math.cos(fang) * fmag + 6, cy + Math.sin(fang) * fmag - 4);
+                }
+
+                // rotor (rotates with mechanical angle = theta_e / p)
+                var rotorAng = VF.PMSM.S.theta_e; // electrical; for SPMSM visual we draw 1 pole-pair magnet
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(-rotorAng); // canvas rotate opposite to math convention (y down)
+                var rR = R * 0.66;
+                // N pole (red) upper half, S pole (gray) lower half
+                ctx.fillStyle = VF.css('--rotor-n');
+                ctx.beginPath();
+                ctx.moveTo(0, 0); ctx.arc(0, 0, rR, -Math.PI / 2, Math.PI / 2); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = VF.css('--rotor-s');
+                ctx.beginPath();
+                ctx.moveTo(0, 0); ctx.arc(0, 0, rR, Math.PI / 2, -Math.PI / 2); ctx.closePath(); ctx.fill();
+                // N/S labels
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('N', rR * 0.55, 0);
+                ctx.fillText('S', -rR * 0.55, 0);
+                // rotor shaft center
+                ctx.beginPath(); ctx.arc(0, 0, 6, 0, VF.TWO_PI);
+                ctx.fillStyle = VF.css('--text-2'); ctx.fill();
+                ctx.restore();
+                ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+                // dq axes overlay (rotate with rotor)
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(-rotorAng);
+                ctx.strokeStyle = VF.css('--axis-d'); ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
+                ctx.beginPath(); ctx.moveTo(-R * 0.7, 0); ctx.lineTo(R * 0.7, 0); ctx.stroke();
+                ctx.strokeStyle = VF.css('--axis-q');
+                ctx.beginPath(); ctx.moveTo(0, -R * 0.7); ctx.lineTo(0, R * 0.7); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = VF.css('--axis-d'); ctx.font = 'bold 12px Inter, sans-serif';
+                ctx.fillText('d', R * 0.7 + 6, 4);
+                ctx.fillStyle = VF.css('--axis-q');
+                ctx.fillText('q', 4, -R * 0.7 - 4);
+                ctx.restore();
+
+                // RPM badge
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '11px Inter, sans-serif';
+                ctx.fillText('θ = ' + Math.round(VF.PMSM.S.theta_e * VF.RAD2DEG) + '°', 10, 18);
+                ctx.fillText('p = ' + VF.PMSM.P.p + ' 极对数', 10, 34);
+            }
+
+            function drawCoil(ctx, cx, cy, r, ang, I, color, label) {
+                var x = cx + Math.cos(ang) * r, y = cy - Math.sin(ang) * r;
+                // dot = current out of page (I>0), cross = into page
+                var rad = 9;
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.25 + Math.min(Math.abs(I) / 15, 0.6);
+                ctx.beginPath(); ctx.arc(x, y, rad + 2, 0, VF.TWO_PI); ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = color; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(x, y, rad, 0, VF.TWO_PI); ctx.stroke();
+                if (I >= 0.3) {
+                    // dot
+                    ctx.fillStyle = color;
+                    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, VF.TWO_PI); ctx.fill();
+                } else if (I <= -0.3) {
+                    // cross
+                    ctx.beginPath();
+                    ctx.moveTo(x - 4, y - 4); ctx.lineTo(x + 4, y + 4);
+                    ctx.moveTo(x + 4, y - 4); ctx.lineTo(x - 4, y + 4);
+                    ctx.stroke();
+                }
+                if (label) {
+                    ctx.fillStyle = color; ctx.font = 'bold 11px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(label, x, y - rad - 6);
+                    ctx.textAlign = 'left';
+                }
+            }
+
+            function drawWave() {
+                var cv = els.cvW, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var top = 16, bot = H - 12, h = bot - top;
+                // two stacked regions: speed (top 55%), currents (bottom 45%)
+                var splitY = top + h * 0.55;
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, top); ctx.lineTo(W, top);
+                ctx.moveTo(0, splitY); ctx.lineTo(W, splitY);
+                ctx.moveTo(0, bot); ctx.lineTo(W, bot);
+                ctx.stroke();
+
+                var N = hist.rpm.length;
+                if (N < 2) return;
+                var xAt = function (i) { return (i / (HIST - 1)) * W; };
+
+                // ---- speed region ----
+                var spdMax = 2100; // RPM scale
+                var ySpd = function (v) { return splitY - (v / spdMax) * (splitY - top - 4); };
+                // ref (dashed gray)
+                ctx.strokeStyle = VF.css('--text-3'); ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
+                ctx.beginPath();
+                for (var i = 0; i < N; i++) { var x = xAt(i); var y = ySpd(hist.ref[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+                ctx.stroke(); ctx.setLineDash([]);
+                // actual rpm (accent)
+                ctx.strokeStyle = VF.css('--accent'); ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (var i = 0; i < N; i++) { var x = xAt(i); var y = ySpd(hist.rpm[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+                ctx.stroke();
+
+                // ---- current region ----
+                var iMax = 25; // A scale
+                var yCur = function (v) {
+                    var mid = (splitY + bot) / 2;
+                    return mid - (v / iMax) * ((bot - splitY) / 2 - 4);
+                };
+                // zero line
+                var mid = (splitY + bot) / 2;
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+                // iq
+                ctx.strokeStyle = VF.css('--axis-q'); ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (var i = 0; i < N; i++) { var x = xAt(i); var y = yCur(hist.iq[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+                ctx.stroke();
+                // id
+                ctx.strokeStyle = VF.css('--axis-d'); ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                for (var i = 0; i < N; i++) { var x = xAt(i); var y = yCur(hist.id[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+                ctx.stroke();
+
+                // labels
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('转速 (RPM)', 8, top + 12);
+                ctx.fillText('电流 (A)', 8, splitY + 12);
+            }
+
+            // expose for tuning tab + tab-switch controller
+            VF.SimUI = { init: init, els: function () { return els; }, start: start, stop: stop };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    init();
+                    VF.onTabSwitch(function (name) {
+                        if (name === 'sim') { if (!userPaused) start(); }
+                        else stop();
+                    });
+                });
+            } else {
+                init();
+                VF.onTabSwitch(function (name) {
+                    if (name === 'sim') { if (!userPaused) start(); }
+                    else stop();
+                });
+            }
+        })();
+
+        /* ====================================================================
+           Visual FOC — Tab 4: Tuning scenarios
+           Shares the VF.PMSM engine with Tab 3 but renders its own waveform
+           canvas (the two tabs are never visible at once, so no conflict).
+           ==================================================================== */
+        (function () {
+            var els = {};
+            var running = false, last = 0, raf = 0;
+            var HIST = 320;
+            var hist = { rpm: [], ref: [], iq: [] };
+            var scenarioTimer = 0;   // for scenarios that apply a delayed load
+
+            var SCENARIOS = [
+                {
+                    id: 'ideal', name: '理想参数', icon: '✓', accent: false,
+                    desc: 'Kp=1.5, Ki=80。快速、无超调地到达目标转速，教科书级响应。',
+                    apply: function () { setParams(600, 0, 1.5, 80, 0.05); }
+                },
+                {
+                    id: 'kp_high', name: 'Kp 过大（振荡）', icon: '〰', accent: true,
+                    desc: 'Kp=20。比例增益过高，转速在目标附近大幅振荡，难以收敛。',
+                    apply: function () { setParams(600, 0, 20, 80, 0.05); }
+                },
+                {
+                    id: 'ki_high', name: 'Ki 过大（超调）', icon: '↗', accent: true,
+                    desc: 'Ki=350。积分累积太快，转速冲过目标一大截才慢慢回落。',
+                    apply: function () { setParams(600, 0, 1.5, 350, 0.05); }
+                },
+                {
+                    id: 'loaded', name: '带载启动', icon: '⚓', accent: false,
+                    desc: '一开始就有 1.5 N·m 负载。观察 Iq 如何维持一个稳态值来对抗负载。',
+                    apply: function () { setParams(800, 1.5, 1.5, 100, 0.05); }
+                },
+                {
+                    id: 'disturb', name: '抗扰动', icon: '⚡', accent: false,
+                    desc: '稳定运行 3 秒后突加 2 N·m 负载，看 FOC 把转速拉回目标。',
+                    apply: function () {
+                        setParams(800, 0, 2.0, 120, 0.05);
+                        scenarioTimer = 3.0;
+                    }
+                },
+                {
+                    id: 'weak_flux', name: '弱磁链电机', icon: '⌀', accent: false,
+                    desc: 'λ_m=0.02。永磁体弱，同样电流产生的转矩小，加速明显变慢。',
+                    apply: function () { setParams(600, 0, 1.5, 80, 0.02); }
+                }
+            ];
+
+            function $(id) { return document.getElementById(id); }
+
+            function setParams(rpm, load, kp, ki, flux) {
+                VF.PMSM.S.speedRef = rpm * 2 * Math.PI / 60;
+                VF.PMSM.S.loadTorque = load;
+                VF.PMSM.S.kp = kp;
+                VF.PMSM.S.ki = ki;
+                VF.PMSM.setFlux(flux);
+                // sync the Tab 3 sliders so switching tabs shows consistent state
+                var sim = VF.SimUI.els();
+                if (sim.simSpd) { sim.simSpd.value = rpm; sim.simSpdVal.textContent = rpm; }
+                if (sim.simLoad) { sim.simLoad.value = load; sim.simLoadVal.textContent = load.toFixed(2); }
+                if (sim.simKp) { sim.simKp.value = kp; sim.simKpVal.textContent = kp.toFixed(2); }
+                if (sim.simKi) { sim.simKi.value = ki; sim.simKiVal.textContent = ki; }
+                if (sim.simFlux) { sim.simFlux.value = flux; sim.simFluxVal.textContent = flux.toFixed(3); }
+                // update tuning readouts
+                els.kp.textContent = kp.toFixed(2);
+                els.ki.textContent = ki;
+                els.rpm.textContent = rpm;
+                // reset state + history for a clean trace
+                VF.PMSM.reset();
+                hist.rpm.length = 0; hist.ref.length = 0; hist.iq.length = 0;
+            }
+
+            function init() {
+                els.grid = $('scenarioGrid');
+                els.cvW = $('cvTuneWave');
+                els.kp = $('tuneKp'); els.ki = $('tuneKi'); els.rpm = $('tuneRpm'); els.actRpm = $('tuneActRpm');
+
+                // build scenario cards
+                SCENARIOS.forEach(function (sc) {
+                    var card = document.createElement('button');
+                    card.className = 'scenario-card' + (sc.accent ? ' scenario-card--warn' : '');
+                    card.innerHTML =
+                        '<div class="sc-head"><span class="sc-ic">' + sc.icon + '</span><span class="sc-name">' + sc.name + '</span></div>' +
+                        '<p class="sc-desc">' + sc.desc + '</p>';
+                    card.addEventListener('click', function () {
+                        // mark active
+                        els.grid.querySelectorAll('.scenario-card').forEach(function (c) { c.classList.remove('active'); });
+                        card.classList.add('active');
+                        sc.apply();
+                        start();
+                    });
+                    els.grid.appendChild(card);
+                });
+
+                // tab-switch driven lifecycle: start on entering tuning, stop on leaving
+                VF.onTabSwitch(function (name) {
+                    if (name === 'tuning') {
+                        if (hist.rpm.length === 0) {
+                            SCENARIOS[0].apply();
+                            els.grid.children[0].classList.add('active');
+                        }
+                        start();
+                    } else {
+                        stop();
+                    }
+                });
+            }
+
+            function start() {
+                if (running) return;
+                running = true;
+                last = performance.now();
+                raf = requestAnimationFrame(loop);
+            }
+            function stop() {
+                running = false;
+                if (raf) { cancelAnimationFrame(raf); raf = 0; }
+            }
+
+            function loop(now) {
+                if (!running) return;
+                try {
+                    now = now || performance.now();
+                    var dt = (now - last) / 1000; last = now;
+                    // scenario delayed actions
+                    if (scenarioTimer > 0) {
+                        scenarioTimer -= dt;
+                        if (scenarioTimer <= 0) { VF.PMSM.S.loadTorque += 2.0; scenarioTimer = 0; }
+                    }
+                    var steps = 8, h = dt / steps;
+                    for (var i = 0; i < steps; i++) VF.PMSM.step(h);
+                    var rpm = VF.PMSM.rpm();
+                    hist.rpm.push(rpm);
+                    hist.ref.push(+els.rpm.textContent);
+                    hist.iq.push(VF.PMSM.S.iq);
+                    while (hist.rpm.length > HIST) { hist.rpm.shift(); hist.ref.shift(); hist.iq.shift(); }
+                    drawWave();
+                    els.actRpm.textContent = Math.round(rpm);
+                    raf = requestAnimationFrame(loop);
+                } catch (e) {
+                    running = false;
+                }
+            }
+
+            function ctx2d(canvas) {
+                var dpr = window.devicePixelRatio || 1;
+                var w = canvas.width, h = canvas.height;
+                if (canvas._dpr !== dpr || canvas._w !== w) {
+                    canvas._dpr = dpr; canvas._w = w;
+                    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+                    canvas.width = w * dpr; canvas.height = h * dpr;
+                }
+                var ctx = canvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                return ctx;
+            }
+
+            function drawWave() {
+                var cv = els.cvW, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var top = 12, bot = H - 10, splitY = top + (bot - top) * 0.6;
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, top); ctx.lineTo(W, top);
+                ctx.moveTo(0, splitY); ctx.lineTo(W, splitY);
+                ctx.moveTo(0, bot); ctx.lineTo(W, bot);
+                ctx.stroke();
+
+                var N = hist.rpm.length;
+                if (N < 2) return;
+                var xAt = function (i) { return (i / (HIST - 1)) * W; };
+                var spdMax = 2100;
+                var ySpd = function (v) { return splitY - (v / spdMax) * (splitY - top - 4); };
+
+                ctx.strokeStyle = VF.css('--text-3'); ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
+                ctx.beginPath();
+                for (var i = 0; i < N; i++) { var x = xAt(i); var y = ySpd(hist.ref[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+                ctx.stroke(); ctx.setLineDash([]);
+                ctx.strokeStyle = VF.css('--accent'); ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (var i = 0; i < N; i++) { var x = xAt(i); var y = ySpd(hist.rpm[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+                ctx.stroke();
+
+                var iMax = 25, mid = (splitY + bot) / 2;
+                var yCur = function (v) { return mid - (v / iMax) * ((bot - splitY) / 2 - 3); };
+                ctx.strokeStyle = VF.css('--grid-line');
+                ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+                ctx.strokeStyle = VF.css('--axis-q'); ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (var i = 0; i < N; i++) { var x = xAt(i); var y = yCur(hist.iq[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+                ctx.stroke();
+
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('转速 (RPM)', 8, top + 11);
+                ctx.fillText('Iq (A)', 8, splitY + 11);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else { init(); }
+        })();
+
+        /* ====================================================================
+           Visual FOC — Tab 5: Quiz
+           ==================================================================== */
+        (function () {
+            var QUESTIONS = [
+                {
+                    q: 'FOC（磁场定向控制）的核心目标是什么？',
+                    o: ['让电机转得更快', '像控制直流电机一样控制交流电机，实现转矩与磁通解耦', '减少电机的极对数', '省去位置传感器'],
+                    a: 1,
+                    e: 'FOC 通过坐标变换，把交流电机的电流分解成独立的磁通分量（d 轴）和转矩分量（q 轴），使其获得类似他励直流电机的解耦特性——能瞬时、独立地控制转矩。'
+                },
+                {
+                    q: 'Clarke 变换把电流从三相 abc 变到几相？',
+                    o: ['1 相', '2 相（αβ）', '3 相（dq）', '保持 3 相不变'],
+                    a: 1,
+                    e: 'Clarke 变换（3s→2s）把空间上相差 120° 的三相电流，变换成两个正交的静止轴 α、β，减少了变量数量，同时保留了合成磁场信息。'
+                },
+                {
+                    q: 'Park 变换需要一个关键输入，它是？',
+                    o: ['母线电压', '转子机械位置角 θ（电角度）', '环境温度', 'PWM 占空比'],
+                    a: 1,
+                    e: 'Park 变换（2s→2r）把静止的 αβ 矢量旋转到固定在转子上的 dq 坐标系，旋转量就是转子电角度 θ——这正是必须有位置传感器的原因。'
+                },
+                {
+                    q: '在 FOC 中，id（d 轴电流）通常被控制为多少？',
+                    o: ['与 iq 相等', '最大允许值', '0', '随负载变化'],
+                    a: 2,
+                    e: '对表贴式电机（SPMSM），d 轴电流不产生额外转矩，只增加无功损耗，所以 id* = 0（最大转矩电流比策略）。iq 才是产生转矩的分量。'
+                },
+                {
+                    q: 'iq（q 轴电流）与电机转矩的关系是？',
+                    o: ['成正比（Te = Kt · iq）', '成反比', '无关', '平方关系'],
+                    a: 0,
+                    e: '对 SPMSM，电磁转矩 Te = 1.5·p·λm·iq，与 iq 成正比。所以控制 iq 就是直接控制转矩——这正是 FOC 调速的本质。'
+                },
+                {
+                    q: '当电角度 θ 持续变化（转子旋转）时，dq 坐标系里的电流 id、iq 会怎样？',
+                    o: ['也变成交流量', '保持为直流量（恒定值）', '变为零', '随机波动'],
+                    a: 1,
+                    e: '这是 FOC 的精髓：虽然 abc 三相是交流，但在与转子同步旋转的 dq 系里，它们变成了直流量，因此可以用普通 PI 控制器精确调节。'
+                },
+                {
+                    q: 'BLDC（梯形波）和 PMSM（正弦波）的主要区别在于？',
+                    o: ['转子结构完全不同', '反电动势波形不同，导致典型驱动方式不同', 'PMSM 不需要位置传感器', 'BLDC 不能用 FOC'],
+                    a: 1,
+                    e: 'BLDC 反电动势是梯形波，常用六步换相（方波）；PMSM 是正弦波，用 FOC（正弦波 SVPWM）。但标称 BLDC 的电机若反电动势接近正弦，也能受益于 FOC。'
+                },
+                {
+                    q: '六步换相相比 FOC 的主要缺点是？',
+                    o: ['效率更低、转矩脉动大、噪声明显', '必须用昂贵的编码器', '无法驱动电机旋转', '响应速度太慢'],
+                    a: 0,
+                    e: '六步换相每个 60° 电角度才切换一次通电状态，换相时刻转矩有突变，导致明显的转矩脉动、噪声和较低效率。FOC 逐角度平滑控制，远优于六步。'
+                },
+                {
+                    q: 'FOC 控制框图中，电流环（内环）的反馈来自哪里？',
+                    o: ['编码器的角度', '实测的三相电流经 Clarke + Park 变换', '速度传感器', '电压采样'],
+                    a: 1,
+                    e: '实测三相电流 ia/ib/ic → Clarke 变换得 iα/iβ → Park 变换（用 θ）得 id/iq，作为两个 PI 控制器的反馈，与 id*、iq* 比较。'
+                },
+                {
+                    q: '调速时，PI 控制器的 Kp 调得过大会出现什么现象？',
+                    o: ['转速永远到不了目标', '转速振荡（在目标值上下反复冲过）', '没有任何影响', '电机停转'],
+                    a: 1,
+                    e: 'Kp（比例增益）过大时反馈过强，系统过冲后又被强力拉回，形成持续的振荡。应适当降低 Kp 或增加阻尼。'
+                },
+                {
+                    q: '突加负载时，FOC 如何维持转速？',
+                    o: ['增大 id', '增大 iq 以产生更大转矩对抗负载', '减小 PWM 占空比', '切换到六步换相'],
+                    a: 1,
+                    e: '负载增加导致转速下降，外环速度 PI 检测到误差后增大 iq*，电流环响应使 iq 上升，电磁转矩增大以平衡负载，转速回升——这正是闭环的抗扰能力。'
+                },
+                {
+                    q: 'SVPWM（空间矢量 PWM）的作用是？',
+                    o: ['测量转子角度', '把两相电压矢量调制成三相逆变器的开关占空比，最大化母线电压利用率', '过滤电流噪声', '保护过流'],
+                    a: 1,
+                    e: 'SVPWM 根据反 Park 得到的 vα/vβ，计算逆变器 6 个开关的占空比，合成所需电压矢量。相比正弦 PWM，它能提高约 15% 的母线电压利用率。'
+                }
+            ];
+
+            var state = { idx: 0, score: 0, answered: false };
+
+            function $(id) { return document.getElementById(id); }
+
+            function renderProgress() {
+                var bar = $('quizProgress');
+                bar.innerHTML = '';
+                QUESTIONS.forEach(function (_, i) {
+                    var seg = document.createElement('div');
+                    seg.className = 'seg';
+                    if (i < state.idx) seg.classList.add('done');
+                    else if (i === state.idx) seg.classList.add('cur');
+                    bar.appendChild(seg);
+                });
+            }
+
+            function renderQuestion() {
+                var q = QUESTIONS[state.idx];
+                var box = $('quizQuestion');
+                var html = '<h3 style="font-size:1.1em; margin-bottom:16px;">' +
+                    '<span style="color:var(--accent); font-family:Inter,sans-serif;">Q' + (state.idx + 1) + '</span> &nbsp; ' + q.q + '</h3>';
+                q.o.forEach(function (opt, i) {
+                    html += '<button class="quiz-option" data-i="' + i + '" onclick="VF.answerQuiz(' + i + ')">' + opt + '</button>';
+                });
+                box.innerHTML = html;
+                $('quizFeedback').className = 'quiz-feedback';
+                $('quizFeedback').style.display = 'none';
+                state.answered = false;
+            }
+
+            function answer(i) {
+                if (state.answered) return;
+                state.answered = true;
+                var q = QUESTIONS[state.idx];
+                var opts = document.querySelectorAll('#quizQuestion .quiz-option');
+                opts.forEach(function (btn) { btn.disabled = true; });
+                var fb = $('quizFeedback');
+                if (i === q.a) {
+                    opts[i].classList.add('correct');
+                    state.score++;
+                    fb.className = 'quiz-feedback ok show';
+                    fb.innerHTML = '✓ 正确！' + q.e;
+                } else {
+                    opts[i].classList.add('wrong');
+                    opts[q.a].classList.add('correct');
+                    fb.className = 'quiz-feedback no show';
+                    fb.innerHTML = '✗ 正确答案：' + q.o[q.a] + '<br><br>' + q.e;
+                }
+                fb.style.display = 'block';
+                setTimeout(function () {
+                    state.idx++;
+                    if (state.idx >= QUESTIONS.length) {
+                        showResults();
+                    } else {
+                        renderProgress();
+                        renderQuestion();
+                    }
+                }, 2800);
+            }
+
+            function showResults() {
+                $('quizArea').style.display = 'none';
+                var res = $('quizResults');
+                res.style.display = 'block';
+                $('quizScore').textContent = state.score;
+                $('quizTotal').textContent = QUESTIONS.length;
+                var pct = Math.round(state.score / QUESTIONS.length * 100);
+                $('quizPct').textContent = pct;
+                var v = $('quizVerdict');
+                if (pct === 100) v.innerHTML = '🏆 满分！你已经完全掌握 FOC 的核心原理。';
+                else if (pct >= 80) v.innerHTML = '👍 优秀！基础扎实，可以放心去调真实电机了。';
+                else if (pct >= 60) v.innerHTML = '🙂 不错。建议回到「变换原理」和「交互仿真」再过一遍。';
+                else v.innerHTML = '📚 还需加油。先把「基础概念」和「变换原理」看明白，动手拖一拖滑块。';
+            }
+
+            function restart() {
+                state.idx = 0; state.score = 0; state.answered = false;
+                $('quizArea').style.display = 'block';
+                $('quizResults').style.display = 'none';
+                renderProgress();
+                renderQuestion();
+            }
+
+            VF.answerQuiz = answer;
+
+            function init() {
+                $('quizRestart').addEventListener('click', restart);
+                renderProgress();
+                renderQuestion();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else { init(); }
+        })();
+    </script>
+</body>
+</html>
