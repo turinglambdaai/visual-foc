@@ -929,6 +929,18 @@
             return getComputedStyle(document.body).getPropertyValue(name).trim();
         };
 
+        // Shared canvas arrow helper (used by transforms + simulation modules)
+        VF.arrow = function (ctx, x1, y1, x2, y2, color, w) {
+            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w || 2.2;
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+            var a = Math.atan2(y2 - y1, x2 - x1), hl = 8;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - hl * Math.cos(a - 0.4), y2 - hl * Math.sin(a - 0.4));
+            ctx.lineTo(x2 - hl * Math.cos(a + 0.4), y2 - hl * Math.sin(a + 0.4));
+            ctx.closePath(); ctx.fill();
+        };
+
         /* ====================================================================
            Visual FOC — Tab 2: Transforms visualization
            ==================================================================== */
@@ -1253,16 +1265,8 @@
                 ctx.fillText(label || 'α', cx + scale + 18, cy + 4);
             }
 
-            function arrow(ctx, x1, y1, x2, y2, color, w) {
-                ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w || 2.2;
-                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-                var a = Math.atan2(y2 - y1, x2 - x1), hl = 8;
-                ctx.beginPath();
-                ctx.moveTo(x2, y2);
-                ctx.lineTo(x2 - hl * Math.cos(a - 0.4), y2 - hl * Math.sin(a - 0.4));
-                ctx.lineTo(x2 - hl * Math.cos(a + 0.4), y2 - hl * Math.sin(a + 0.4));
-                ctx.closePath(); ctx.fill();
-            }
+            // arrow helper is shared via VF.arrow (defined in the math section)
+            var arrow = VF.arrow;
 
             // (1) Three-phase scrolling waveforms
             function drawThreePhase(i3, th) {
@@ -1717,7 +1721,7 @@
                 var fmag = Math.min(Math.hypot(ab.alpha, ab.beta) / 20, 1) * R * 0.6;
                 var fang = Math.atan2(-ab.beta, ab.alpha); // canvas y-down
                 if (fmag > 2) {
-                    arrow(ctx, cx, cy, cx + Math.cos(fang) * fmag, cy + Math.sin(fang) * fmag, VF.css('--accent'), 3);
+                    VF.arrow(ctx, cx, cy, cx + Math.cos(fang) * fmag, cy + Math.sin(fang) * fmag, VF.css('--accent'), 3);
                     ctx.fillStyle = VF.css('--accent'); ctx.font = 'bold 11px Inter, sans-serif';
                     ctx.fillText('定子磁势', cx + Math.cos(fang) * fmag + 6, cy + Math.sin(fang) * fmag - 4);
                 }
