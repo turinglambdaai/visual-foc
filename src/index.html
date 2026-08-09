@@ -683,6 +683,13 @@
                     <!-- Motor canvas -->
                     <div class="canvas-box">
                         <canvas id="cvMotor" width="480" height="480"></canvas>
+                        <div class="legend" style="margin-top:10px; justify-content:center;">
+                            <span><i style="background:var(--rotor-n)"></i>转子磁通 λᵐ（永磁体，沿 d 轴）</span>
+                            <span><i style="background:var(--accent)"></i>定子磁势 Fₛ（电流合成）</span>
+                        </div>
+                        <p style="font-size:0.8em; color:var(--text-3); margin-top:6px; line-height:1.55; text-align:center;">
+                            两矢量的夹角 δ（负载角）决定转矩：δ 越大转矩越大，FOC 通过控制定子电流让 Fₛ 始终超前 λᵐ 约 90°，获得最大转矩。
+                        </p>
                     </div>
                     <!-- Control panel -->
                     <div class="canvas-box">
@@ -1715,19 +1722,47 @@
                     drawCoil(ctx, cx, cy, R * 0.86, ang + Math.PI, -I, cols[ph], '');
                 });
 
-                // airgap flux vector from currents (alpha-beta of stator current)
-                var ab = VF.invPark(VF.PMSM.S.id, VF.PMSM.S.iq, VF.PMSM.S.theta_e);
-                // scale: currents can be large, normalize
+                // ---- 磁场矢量（FOC 核心画面）----
+                // 转子磁通方向 = 电角度 θ_e（canvas y-down → 取负角）
+                var rotorAng = VF.PMSM.S.theta_e;
+                var fluxAng = -rotorAng;                       // 转子磁通在画布上的方向
+                // 定子磁势方向由 (iα, iβ) 决定
+                var ab = VF.invPark(VF.PMSM.S.id, VF.PMSM.S.iq, rotorAng);
+                var mmfAng = Math.atan2(-ab.beta, ab.alpha);   // canvas y-down
+
+                // 转子磁通矢量（恒定存在，沿 d 轴 / N 极方向）
+                var fluxLen = R * 0.62;
+                VF.arrow(ctx, cx, cy, cx + Math.cos(fluxAng) * fluxLen, cy + Math.sin(fluxAng) * fluxLen, VF.css('--rotor-n'), 3.5);
+                ctx.fillStyle = VF.css('--rotor-n'); ctx.font = 'bold 11px Inter, sans-serif';
+                ctx.fillText('转子磁通 λᵐ', cx + Math.cos(fluxAng) * fluxLen + 6, cy + Math.sin(fluxAng) * fluxLen - 4);
+
+                // 定子磁势矢量（电流合成，长度随电流，最小可见长度避免静止时消失）
                 var fmag = Math.min(Math.hypot(ab.alpha, ab.beta) / 20, 1) * R * 0.6;
-                var fang = Math.atan2(-ab.beta, ab.alpha); // canvas y-down
-                if (fmag > 2) {
-                    VF.arrow(ctx, cx, cy, cx + Math.cos(fang) * fmag, cy + Math.sin(fang) * fmag, VF.css('--accent'), 3);
-                    ctx.fillStyle = VF.css('--accent'); ctx.font = 'bold 11px Inter, sans-serif';
-                    ctx.fillText('定子磁势', cx + Math.cos(fang) * fmag + 6, cy + Math.sin(fang) * fmag - 4);
+                if (fmag < R * 0.18) fmag = R * 0.18;          // 最小可见
+                if (Math.hypot(ab.alpha, ab.beta) > 0.05) {
+                    VF.arrow(ctx, cx, cy, cx + Math.cos(mmfAng) * fmag, cy + Math.sin(mmfAng) * fmag, VF.css('--accent'), 3.5);
+                    ctx.fillStyle = VF.css('--accent');
+                    ctx.fillText('定子磁势 Fₛ', cx + Math.cos(mmfAng) * fmag + 6, cy + Math.sin(mmfAng) * fmag - 4);
+                }
+
+                // 负载角 δ（两矢量夹角 = 转矩的来源）—— 在两矢量间画弧
+                var delta = mmfAng - fluxAng;
+                // normalize to [-π, π]
+                while (delta > Math.PI) delta -= 2 * Math.PI;
+                while (delta < -Math.PI) delta += 2 * Math.PI;
+                if (Math.abs(delta) > 0.06) {
+                    var arcR = R * 0.26;
+                    ctx.strokeStyle = VF.css('--text-2'); ctx.lineWidth = 1.4;
+                    ctx.beginPath();
+                    // canvas arc: from fluxAng to mmfAng (both already canvas-frame)
+                    ctx.arc(cx, cy, arcR, fluxAng, mmfAng, delta < 0);
+                    ctx.stroke();
+                    var midAng = fluxAng + delta / 2;
+                    ctx.fillStyle = VF.css('--text-2'); ctx.font = 'bold 11px Inter, sans-serif';
+                    ctx.fillText('δ=' + Math.round(Math.abs(delta) * VF.RAD2DEG) + '°', cx + Math.cos(midAng) * (arcR + 8) - 12, cy + Math.sin(midAng) * (arcR + 8) + 4);
                 }
 
                 // rotor (rotates with mechanical angle = theta_e / p)
-                var rotorAng = VF.PMSM.S.theta_e; // electrical; for SPMSM visual we draw 1 pole-pair magnet
                 ctx.save();
                 ctx.translate(cx, cy);
                 ctx.rotate(-rotorAng); // canvas rotate opposite to math convention (y down)
@@ -1749,25 +1784,29 @@
                 ctx.restore();
                 ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
-                // dq axes overlay (rotate with rotor)
+                // dq axes overlay (rotate with rotor) — 淡化，让磁场矢量更突出
                 ctx.save();
                 ctx.translate(cx, cy);
                 ctx.rotate(-rotorAng);
-                ctx.strokeStyle = VF.css('--axis-d'); ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
+                ctx.globalAlpha = 0.5;
+                ctx.strokeStyle = VF.css('--axis-d'); ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
                 ctx.beginPath(); ctx.moveTo(-R * 0.7, 0); ctx.lineTo(R * 0.7, 0); ctx.stroke();
                 ctx.strokeStyle = VF.css('--axis-q');
                 ctx.beginPath(); ctx.moveTo(0, -R * 0.7); ctx.lineTo(0, R * 0.7); ctx.stroke();
                 ctx.setLineDash([]);
+                ctx.globalAlpha = 1;
                 ctx.fillStyle = VF.css('--axis-d'); ctx.font = 'bold 12px Inter, sans-serif';
                 ctx.fillText('d', R * 0.7 + 6, 4);
                 ctx.fillStyle = VF.css('--axis-q');
                 ctx.fillText('q', 4, -R * 0.7 - 4);
                 ctx.restore();
 
-                // RPM badge
+                // RPM badge + 负载角 δ
                 ctx.fillStyle = VF.css('--text-3'); ctx.font = '11px Inter, sans-serif';
                 ctx.fillText('θ = ' + Math.round(VF.PMSM.S.theta_e * VF.RAD2DEG) + '°', 10, 18);
                 ctx.fillText('p = ' + VF.PMSM.P.p + ' 极对数', 10, 34);
+                ctx.fillStyle = VF.css('--text-2');
+                ctx.fillText('负载角 δ = ' + Math.round(Math.abs(delta) * VF.RAD2DEG) + '°（定子磁势超前转子磁通）', 10, 50);
             }
 
             function drawCoil(ctx, cx, cy, r, ang, I, color, label) {
