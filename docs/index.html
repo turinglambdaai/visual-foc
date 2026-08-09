@@ -1121,10 +1121,19 @@
                 ctx.fillText('目标: id*=0, iq*=' + I.toFixed(1) + ' → 反Park → 逆Clarke → 三相调制电压', pad - 4, 18);
             }
 
-            // init when DOM ready
+            // init when DOM ready; redraw whenever the transforms tab becomes visible
+            // (the initial draw happens while the tab is hidden, so we must repaint on show)
+            function bootstrap() {
+                init();
+                if (VF.onTabSwitch) {
+                    VF.onTabSwitch(function (name) {
+                        if (name === 'transforms') update();
+                    });
+                }
+            }
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else { init(); }
+                document.addEventListener('DOMContentLoaded', bootstrap);
+            } else { bootstrap(); }
         })();
 
         /* ====================================================================
