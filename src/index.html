@@ -80,12 +80,21 @@
             --bg: #F9F7F4; --surface: #FFFFFF; --text: #1C1917;
             --text-2: #57534E; --text-3: #A8A29E; --accent: #D97757;
             --accent-hover: #C4623E; --accent-bg: #FFF7ED; --border: #E7E5E4;
+            --phase-a: #D97757; --phase-b: #5B8C5A; --phase-c: #4A6FA5;
+            --axis-d: #9B7ACC; --axis-q: #C49A4A;
+            --rotor-n: #C15F3C; --rotor-s: #6B7280;
+            --grid-line: rgba(28, 25, 23, 0.08);
+            --ok: #166534; --ok-bg: #DCFCE7; --err: #991B1B; --err-bg: #FEE2E2;
         }
         body[data-theme="dark"] {
             --bg: #171412; --surface: #231F1D; --text: #E7E5E4;
             --text-2: #A8A29E; --text-3: #78716C; --accent: #E8926A;
             --accent-hover: #F0A07C; --accent-bg: #2D2218; --border: #3D3835;
+            --phase-a: #E8926A; --phase-b: #8FB38E; --phase-c: #7FA0D4;
+            --axis-d: #B9A0DD; --axis-q: #DDB87A;
+            --rotor-n: #E07A52; --rotor-s: #9CA3AF;
             --grid-line: rgba(231, 229, 228, 0.08);
+            --ok: #86EFAC; --ok-bg: #14532D; --err: #FCA5A5; --err-bg: #7F1D1D;
         }
 
         /* ---- Reset & Base ---- */
@@ -913,9 +922,11 @@
             return { a: alpha, b: -0.5 * alpha + (VF.SQRT3 / 2) * beta, c: -0.5 * alpha - (VF.SQRT3 / 2) * beta };
         };
 
-        // Read CSS variable (for canvas colors that follow theme)
+        // Read CSS variable (for canvas colors that follow theme).
+        // Read from <body>: the data-theme attribute lives on body, so theme
+        // overrides defined on body[data-theme] resolve here correctly.
         VF.css = function (name) {
-            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            return getComputedStyle(document.body).getPropertyValue(name).trim();
         };
 
         /* ====================================================================
