@@ -541,6 +541,60 @@
             <div class="transform-wrap">
                 <p class="lead">FOC 的全部数学，本质是<strong>三次坐标变换</strong>。下面把每一步都画出来：拖动「电角度 θ」滑块，或者点「自动旋转」让 θ 持续推进，观察三相电流、αβ 矢量、dq 旋转坐标系如何联动。</p>
 
+                <!-- ===== FOC 全景串联演示（新增）===== -->
+                <div class="canvas-box" style="margin-bottom:24px; padding:20px;">
+                    <h3 style="font-size:1.1em; margin-bottom:4px;">🎯 FOC 全景演示：从三相电到最大转矩</h3>
+                    <p style="font-size:0.88em; color:var(--text-2); margin-bottom:14px;">一条因果链，看懂 FOC 为什么能让作用力最大。<strong>拖动「转矩角 γ」</strong>——观察定子电流矢量相对转子磁通的角度如何决定转矩：当 γ=90°（电流全在 q 轴，id=0）时，<strong>转矩最大</strong>。</p>
+
+                    <!-- 全景控制器 -->
+                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+                        <div class="slider-row" style="flex:1; min-width:240px; margin:0;">
+                            <div class="slider-label">
+                                <span class="name">转矩角 γ（定子电流 vs 转子磁通的夹角）</span>
+                                <span class="val" id="ovGammaVal">90°</span>
+                            </div>
+                            <input type="range" id="ovGamma" min="0" max="180" value="90" step="1">
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="ovAutoBtn">▶ 自动扫描 γ</button>
+                        <div class="readout-grid" style="margin:0; display:flex; gap:8px; flex-wrap:wrap;">
+                            <div class="readout" style="padding:6px 10px;"><div class="k">id / I</div><div class="v" id="ovId" style="font-size:0.95em;">0.00</div></div>
+                            <div class="readout" style="padding:6px 10px;"><div class="k">iq / I</div><div class="v" id="ovIq" style="font-size:0.95em;">1.00</div></div>
+                            <div class="readout" style="padding:6px 10px;"><div class="k">转矩 T ∝</div><div class="v" id="ovTorque" style="font-size:0.95em;">1.00</div></div>
+                        </div>
+                    </div>
+
+                    <!-- 4 个联动面板 -->
+                    <div id="ovPanels" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+                        <div>
+                            <canvas id="ovP1" width="220" height="200"></canvas>
+                            <p class="ov-cap" id="ovCap1">① 三相电流 abc</p>
+                        </div>
+                        <div>
+                            <canvas id="ovP2" width="220" height="200"></canvas>
+                            <p class="ov-cap" id="ovCap2">② Clarke → αβ</p>
+                        </div>
+                        <div>
+                            <canvas id="ovP3" width="220" height="200"></canvas>
+                            <p class="ov-cap" id="ovCap3">③ Park → dq（贴转子）</p>
+                        </div>
+                        <div>
+                            <canvas id="ovP4" width="220" height="200"></canvas>
+                            <p class="ov-cap" id="ovCap4">④ 转矩 T = K·iq</p>
+                        </div>
+                    </div>
+
+                    <!-- 流向箭头 + 说明 -->
+                    <p style="font-size:0.8em; color:var(--text-3); margin-top:10px; line-height:1.6;">
+                        <strong style="color:var(--text-2);">数据流：</strong> 三相电流 <code>ia,ib,ic</code> → Clarke 降维到两相正交 <code>iα,iβ</code>（合成定子电流矢量 <span class="math">i<span class="sub">s</span></span>）→ Park 旋到转子坐标系，分解为 <code>id</code>（与磁通平行，不产转矩）和 <code>iq</code>（与磁通垂直，产生转矩）→ 转矩 <span class="math">T ∝ i<span class="sub">q</span> = I·sinγ</span>。
+                        <br><strong style="color:var(--accent);">关键直觉：</strong> 定子电流矢量只有<strong>垂直于</strong>转子磁通的分量（q 轴）才"推得动"转子。γ=90° 时全部电流都垂直，效率最高——这正是 FOC 把 id 控制为 0 的原因。
+                    </p>
+                </div>
+                <style>
+                    .ov-cap { font-size:0.78em; color:var(--text-3); text-align:center; margin:6px 0 0; font-weight:500; }
+                    @media (max-width: 880px) { #ovPanels { grid-template-columns: repeat(2,1fr) !important; } }
+                    @media (max-width: 480px) { #ovPanels { grid-template-columns: 1fr !important; } }
+                </style>
+
                 <!-- Controller bar -->
                 <div class="canvas-box" style="margin-bottom:18px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
                     <div class="slider-row" style="flex:1; min-width:220px; margin:0;">
@@ -870,6 +924,8 @@
         (function () {
             var state = { thetaDeg: 0, I: 1.0, auto: false, raf: 0, last: 0, speed: 90 /* deg/s */ };
             var els = {};
+            // Overview (全景串联演示) state
+            var ov = { gammaDeg: 90, ovAuto: false, ovRaf: 0, ovLast: 0, ovDir: 1, I: 1.0 };
 
             function $(id) { return document.getElementById(id); }
 
@@ -901,7 +957,217 @@
                     update();
                 });
 
+                // ===== 全景演示（Overview）初始化 =====
+                ov.gammaDeg = 90; ov.ovAuto = false; ov.ovRaf = 0; ov.ovLast = 0; ov.ovDir = 1;
+                els.ovGamma = $('ovGamma'); els.ovGammaVal = $('ovGammaVal');
+                els.ovAutoBtn = $('ovAutoBtn');
+                els.ovId = $('ovId'); els.ovIq = $('ovIq'); els.ovTorque = $('ovTorque');
+                els.ovP1 = $('ovP1'); els.ovP2 = $('ovP2'); els.ovP3 = $('ovP3'); els.ovP4 = $('ovP4');
+                els.ovGamma.addEventListener('input', function () {
+                    ov.gammaDeg = +els.ovGamma.value;
+                    ov.ovAuto = false; els.ovAutoBtn.textContent = '▶ 自动扫描 γ';
+                    ovUpdate();
+                });
+                els.ovAutoBtn.addEventListener('click', function () {
+                    ov.ovAuto = !ov.ovAuto;
+                    els.ovAutoBtn.textContent = ov.ovAuto ? '⏸ 停止扫描' : '▶ 自动扫描 γ';
+                    ov.ovLast = performance.now();
+                    if (ov.ovAuto) ovLoop();
+                });
+
                 update();
+            }
+
+            /* ============ 全景串联演示：核心逻辑 ============
+               物理设定：转子磁通沿 d 轴（水平），定子电流合成矢量 i_s
+               与 d 轴夹角 = 转矩角 γ。id = I·cosγ（平行磁通，不产转矩），
+               iq = I·sinγ（垂直磁通，产生转矩），T ∝ iq = sinγ。
+               γ=90° → sinγ=1 → 转矩最大（id=0，全压 q 轴）= FOC 目标。
+            ==================================================== */
+            function ovUpdate() {
+                var g = ov.gammaDeg * VF.DEG;
+                var I = ov.I;
+                // 分解定子电流矢量（幅值 I，方向 γ）
+                var id = I * Math.cos(g), iq = I * Math.sin(g);
+                // 为了画三相，反推：设定子矢量在 αβ 系角度=γ（让 α 轴对齐 d 轴，即 θ=0）
+                // 则 iα = id, iβ 方向... 更直接：三相由 (id,iq) 经反Park(θ=0)→αβ→逆Clarke
+                var ab = VF.invPark(id, iq, 0);   // θ=0: d 沿 α，q 沿 β
+                var i3 = VF.invClarke(ab.alpha, ab.beta);
+                var torque = iq; // T ∝ iq（归一化）
+
+                els.ovGammaVal.textContent = Math.round(ov.gammaDeg) + '°';
+                els.ovId.textContent = id.toFixed(2);
+                els.ovIq.textContent = iq.toFixed(2);
+                els.ovTorque.textContent = torque.toFixed(2);
+
+                ovDrawP1(i3);        // 三相
+                ovDrawP2(ab, g);     // Clarke: αβ + 定子矢量
+                ovDrawP3(id, iq, g); // Park: dq 分解
+                ovDrawP4(torque, g); // 转矩
+            }
+
+            function ovLoop(now) {
+                if (!ov.ovAuto) return;
+                now = now || performance.now();
+                var dt = (now - ov.ovLast) / 1000; ov.ovLast = now;
+                ov.gammaDeg += ov.ovDir * 35 * dt; // 35°/s 扫描
+                if (ov.gammaDeg >= 180) { ov.gammaDeg = 180; ov.ovDir = -1; }
+                if (ov.gammaDeg <= 0) { ov.gammaDeg = 0; ov.ovDir = 1; }
+                els.ovGamma.value = Math.round(ov.gammaDeg);
+                ovUpdate();
+                ov.ovRaf = requestAnimationFrame(ovLoop);
+            }
+
+            // ① 三相电流（三条小波形 + 当前柱）
+            function ovDrawP1(i3) {
+                var cv = els.ovP1, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var mid = H / 2, amp = H * 0.32;
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+                var phases = [['a', i3.a, VF.css('--phase-a')], ['b', i3.b, VF.css('--phase-b')], ['c', i3.c, VF.css('--phase-c')]];
+                phases.forEach(function (p) {
+                    ctx.strokeStyle = p[2]; ctx.lineWidth = 1.8; ctx.beginPath();
+                    for (var x = 0; x <= W; x++) {
+                        var deg = (x / W) * 360;
+                        // 重建该相的完整正弦（用反Clarke的静态映射画一个周期示意）
+                        var val;
+                        if (p[0] === 'a') val = Math.cos(deg * VF.DEG);
+                        else if (p[0] === 'b') val = Math.cos((deg - 120) * VF.DEG);
+                        else val = Math.cos((deg + 120) * VF.DEG);
+                        // 缩放到当前幅值方向（用 i3 的符号/比例做调幅展示）
+                        var y = mid - val * amp * ov.I;
+                        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                });
+                // 当前三相瞬时值柱（右侧）
+                var bx = W - 28;
+                [['a', i3.a, VF.css('--phase-a')], ['b', i3.b, VF.css('--phase-b')], ['c', i3.c, VF.css('--phase-c')]].forEach(function (p, i) {
+                    var x = bx - 18 + i * 9;
+                    var h = p[1] * amp * 0.7;
+                    ctx.fillStyle = p[2];
+                    if (h >= 0) ctx.fillRect(x - 2, mid - h, 5, h);
+                    else ctx.fillRect(x - 2, mid, 5, -h);
+                });
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '9px Inter, sans-serif';
+                ctx.fillText('ia,ib,ic', 6, H - 4);
+            }
+
+            // ② Clarke：三相 → αβ，画定子电流合成矢量
+            function ovDrawP2(ab, g) {
+                var cv = els.ovP2, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var cx = W / 2, cy = H / 2, scale = Math.min(W, H) * 0.36;
+                // αβ 轴
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cx - scale - 8, cy); ctx.lineTo(cx + scale + 8, cy);
+                ctx.moveTo(cx, cy - scale - 8); ctx.lineTo(cx, cy + scale + 8);
+                ctx.stroke();
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('α', cx + scale + 10, cy + 3); ctx.fillText('β', cx - 12, cy - scale - 6);
+                // 三相轴（淡）
+                [0, VF.TWO_PI_3, -VF.TWO_PI_3].forEach(function (a, i) {
+                    ctx.strokeStyle = VF.css('--grid-line');
+                    ctx.beginPath(); ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx + Math.cos(a) * scale * 0.9, cy - Math.sin(a) * scale * 0.9); ctx.stroke();
+                });
+                // 定子电流合成矢量 i_s（= αβ 矢量）
+                arrow(ctx, cx, cy, cx + ab.alpha * scale, cy - ab.beta * scale, VF.css('--accent'), 3);
+                ctx.fillStyle = VF.css('--accent'); ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.fillText('i_s', cx + ab.alpha * scale + 5, cy - ab.beta * scale - 3);
+            }
+
+            // ③ Park：dq 分解（转子磁通沿 d 轴）
+            function ovDrawP3(id, iq, g) {
+                var cv = els.ovP3, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var cx = W / 2, cy = H / 2, scale = Math.min(W, H) * 0.34;
+                // dq 轴（d 水平 = 转子磁通方向，q 垂直）
+                ctx.strokeStyle = VF.css('--axis-d'); ctx.lineWidth = 1.6;
+                ctx.beginPath(); ctx.moveTo(cx - scale - 8, cy); ctx.lineTo(cx + scale + 8, cy); ctx.stroke();
+                ctx.strokeStyle = VF.css('--axis-q');
+                ctx.beginPath(); ctx.moveTo(cx, cy - scale - 8); ctx.lineTo(cx, cy + scale + 8); ctx.stroke();
+                ctx.fillStyle = VF.css('--axis-d'); ctx.font = 'bold 11px Inter, sans-serif';
+                ctx.fillText('d (磁通)', cx + scale + 4, cy + 14);
+                ctx.fillStyle = VF.css('--axis-q');
+                ctx.fillText('q (转矩)', cx + 6, cy - scale - 4);
+                // 转子磁通方向标识（沿 d 轴的磁铁 N→）
+                ctx.fillStyle = VF.css('--rotor-n');
+                ctx.beginPath(); ctx.arc(cx + scale * 0.78, cy, 7, 0, VF.TWO_PI); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('N', cx + scale * 0.78, cy); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+                // id 分量（沿 d 轴，淡）
+                ctx.globalAlpha = 0.4;
+                arrow(ctx, cx, cy, cx + id * scale, cy, VF.css('--axis-d'), 2.5);
+                ctx.globalAlpha = 1;
+                // iq 分量（沿 q 轴，高亮 —— 这是产生转矩的部分）
+                arrow(ctx, cx, cy, cx, cy - iq * scale, VF.css('--axis-q'), 3);
+                // 合成矢量 i_s
+                arrow(ctx, cx, cy, cx + id * scale, cy - iq * scale, VF.css('--accent'), 2);
+                // γ 角弧标注
+                if (ov.gammaDeg > 3 && ov.gammaDeg < 177) {
+                    ctx.strokeStyle = VF.css('--accent'); ctx.lineWidth = 1.3;
+                    ctx.beginPath();
+                    var r = scale * 0.4;
+                    ctx.arc(cx, cy, r, 0, -g, true);
+                    ctx.stroke();
+                    ctx.fillStyle = VF.css('--accent'); ctx.font = 'bold 10px Inter, sans-serif';
+                    ctx.fillText('γ', cx + r * 0.65 * Math.cos(-g / 2) + 4, cy + r * 0.65 * Math.sin(-g / 2));
+                }
+            }
+
+            // ④ 转矩：sinγ 曲线 + 当前点
+            function ovDrawP4(torque, g) {
+                var cv = els.ovP4, ctx = ctx2d(cv), W = cv._w, H = cv._h;
+                ctx.clearRect(0, 0, W, H);
+                var pad = 18, top = 16, bot = H - 22;
+                // 坐标轴
+                ctx.strokeStyle = VF.css('--grid-line'); ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(pad, bot); ctx.lineTo(W - pad, bot);
+                ctx.moveTo(pad, top); ctx.lineTo(pad, bot);
+                ctx.stroke();
+                // sinγ 曲线（0..180°）
+                ctx.strokeStyle = VF.css('--text-3'); ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                for (var i = 0; i <= 100; i++) {
+                    var deg = (i / 100) * 180;
+                    var v = Math.sin(deg * VF.DEG);
+                    var x = pad + (deg / 180) * (W - 2 * pad);
+                    var y = bot - v * (bot - top - 4);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                // 填充当前点以下区域（转矩可视化）
+                var cx = pad + (ov.gammaDeg / 180) * (W - 2 * pad);
+                var cy = bot - torque * (bot - top - 4);
+                ctx.fillStyle = VF.css('--accent'); ctx.globalAlpha = 0.18;
+                ctx.beginPath();
+                ctx.moveTo(pad, bot);
+                for (var i = 0; i <= 100; i++) {
+                    var deg = (i / 100) * 180;
+                    if (deg > ov.gammaDeg) break;
+                    var x = pad + (deg / 180) * (W - 2 * pad);
+                    var y = bot - Math.sin(deg * VF.DEG) * (bot - top - 4);
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(cx, bot); ctx.closePath(); ctx.fill();
+                ctx.globalAlpha = 1;
+                // 当前点
+                ctx.fillStyle = VF.css('--accent');
+                ctx.beginPath(); ctx.arc(cx, cy, 5, 0, VF.TWO_PI); ctx.fill();
+                // γ=90° 最大转矩标记
+                var mx = pad + 0.5 * (W - 2 * pad), my = top + 4;
+                ctx.strokeStyle = VF.css('--axis-q'); ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+                ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx, bot); ctx.stroke(); ctx.setLineDash([]);
+                ctx.fillStyle = VF.css('--axis-q'); ctx.font = 'bold 9px Inter, sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('最大 γ=90°', mx, my - 2); ctx.textAlign = 'left';
+                // 轴标签
+                ctx.fillStyle = VF.css('--text-3'); ctx.font = '9px Inter, sans-serif';
+                ctx.fillText('0°', pad - 6, bot + 12); ctx.fillText('180°', W - pad - 14, bot + 12);
+                ctx.fillText('T', pad - 14, top + 8);
             }
 
             function loop(now) {
@@ -1127,7 +1393,7 @@
                 init();
                 if (VF.onTabSwitch) {
                     VF.onTabSwitch(function (name) {
-                        if (name === 'transforms') update();
+                        if (name === 'transforms') { update(); ovUpdate(); }
                     });
                 }
             }
