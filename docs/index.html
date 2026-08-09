@@ -987,6 +987,7 @@
                 });
 
                 update();
+                ovUpdate();   // first paint of the overview demo
             }
 
             /* ============ 全景串联演示：核心逻辑 ============
@@ -1218,9 +1219,18 @@
             // helper: get a canvas 2d context with crisp scaling
             function ctx2d(canvas) {
                 var dpr = window.devicePixelRatio || 1;
-                var w = canvas.width, h = canvas.height;
-                if (canvas._dpr !== dpr || canvas._w !== w) {
-                    canvas._dpr = dpr; canvas._w = w;
+                // Cache the ORIGINAL logical size on first call (from the HTML
+                // width/height attributes). Never re-read canvas.width afterwards —
+                // it gets multiplied by dpr below, so naively re-reading would
+                // compound the scaling on every redraw.
+                if (!canvas.dataset.lw) {
+                    canvas.dataset.lw = canvas.width;
+                    canvas.dataset.lh = canvas.height;
+                }
+                var w = +canvas.dataset.lw, h = +canvas.dataset.lh;
+                canvas._w = w; canvas._h = h;   // expose logical size to draw fns
+                if (canvas._dpr !== dpr) {
+                    canvas._dpr = dpr;
                     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
                     canvas.width = w * dpr; canvas.height = h * dpr;
                 }
@@ -1648,9 +1658,18 @@
 
             function ctx2d(canvas) {
                 var dpr = window.devicePixelRatio || 1;
-                var w = canvas.width, h = canvas.height;
-                if (canvas._dpr !== dpr || canvas._w !== w) {
-                    canvas._dpr = dpr; canvas._w = w;
+                // Cache the ORIGINAL logical size on first call (from the HTML
+                // width/height attributes). Never re-read canvas.width afterwards —
+                // it gets multiplied by dpr below, so naively re-reading would
+                // compound the scaling on every redraw.
+                if (!canvas.dataset.lw) {
+                    canvas.dataset.lw = canvas.width;
+                    canvas.dataset.lh = canvas.height;
+                }
+                var w = +canvas.dataset.lw, h = +canvas.dataset.lh;
+                canvas._w = w; canvas._h = h;   // expose logical size to draw fns
+                if (canvas._dpr !== dpr) {
+                    canvas._dpr = dpr;
                     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
                     canvas.width = w * dpr; canvas.height = h * dpr;
                 }
@@ -2000,9 +2019,18 @@
 
             function ctx2d(canvas) {
                 var dpr = window.devicePixelRatio || 1;
-                var w = canvas.width, h = canvas.height;
-                if (canvas._dpr !== dpr || canvas._w !== w) {
-                    canvas._dpr = dpr; canvas._w = w;
+                // Cache the ORIGINAL logical size on first call (from the HTML
+                // width/height attributes). Never re-read canvas.width afterwards —
+                // it gets multiplied by dpr below, so naively re-reading would
+                // compound the scaling on every redraw.
+                if (!canvas.dataset.lw) {
+                    canvas.dataset.lw = canvas.width;
+                    canvas.dataset.lh = canvas.height;
+                }
+                var w = +canvas.dataset.lw, h = +canvas.dataset.lh;
+                canvas._w = w; canvas._h = h;   // expose logical size to draw fns
+                if (canvas._dpr !== dpr) {
+                    canvas._dpr = dpr;
                     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
                     canvas.width = w * dpr; canvas.height = h * dpr;
                 }
