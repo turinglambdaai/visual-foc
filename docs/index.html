@@ -306,7 +306,19 @@
             .page-header { padding: 32px 0 12px; }
             .page-header h1 { font-size: 1.5em; }
         }
+
+        /* ---- Ad sidebars (consistent with Visual Protocol / yinwangdl) ---- */
+        .page-layout { display: flex; justify-content: center; gap: 24px; min-height: 100vh; }
+        .page-body { width: 100%; min-width: 0; }
+        .ad-sidebar { width: 160px; flex-shrink: 0; position: sticky; top: calc(var(--nav-h) + 24px); height: fit-content; align-self: flex-start; }
+        @media (max-width: 1199px) {
+            .ad-sidebar { display: none; }
+            .page-layout { display: block; min-height: 0; }
+        }
     </style>
+    <meta name="google-adsense-account" content="ca-pub-3215512126020129">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3215512126020129" crossorigin="anonymous"></script>
+    <!-- umami analytics: account at limit, add data-website-id later -->
 </head>
 <body>
     <nav class="site-nav" role="navigation">
@@ -325,6 +337,12 @@
         </div>
     </nav>
 
+    <div class="page-layout">
+        <aside class="ad-sidebar ad-sidebar--left" aria-hidden="true">
+            <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3215512126020129" data-ad-slot="7014497615" data-ad-format="auto" data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+        </aside>
+        <div class="page-body">
     <div class="container">
         <header class="page-header">
             <h1>理解 FOC 磁场定向控制</h1>
@@ -842,6 +860,12 @@
                 </div>
             </div>
         </footer>
+    </div>
+        </div>
+        <aside class="ad-sidebar ad-sidebar--right" aria-hidden="true">
+            <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3215512126020129" data-ad-slot="7014497615" data-ad-format="auto" data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+        </aside>
     </div>
 
     <script>
