@@ -11,7 +11,7 @@ Interactive learning platform for **FOC (Field-Oriented Control)** of BLDC / PMS
 ## Features
 
 - **Fundamentals** — what FOC is, the BLDC vs PMSM distinction, the full control block diagram, and why a position sensor is essential
-- **Transforms** — interactive Canvas visualizations of the 3-phase currents, Clarke transform (abc → αβ), Park transform (αβ → dq), and the inverse chain, with a draggable electrical-angle slider
+- **Animated Walkthrough** — one guided animation tells the whole story in 7 narrated steps: three-phase currents, the rotating field, the rotor following it, the torque angle γ, Clarke/Park transforms and the encoder. Three linked canvases (phase currents / motor cross-section / rotor-view dq + torque) share a single state; a free-explore mode hands the γ and speed sliders to you
 - **Simulation** — a real PMSM physics engine (Clarke → Park → PI → inverse Park → SVPWM → electrical + mechanical equations) running on `requestAnimationFrame`, with a live motor visualization and scrolling waveforms (speed, Iq, Id)
 - **Tuning** — preset PI-tuning scenarios (ideal, oscillating Kp, overshooting Ki, loaded start, disturbance rejection) that demonstrate classic phenomena
 - **Quiz** — instant-feedback questions to verify your understanding
