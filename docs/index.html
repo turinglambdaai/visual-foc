@@ -671,10 +671,10 @@
                         <canvas id="cvMotor" width="480" height="480"></canvas>
                         <div class="legend" style="margin-top:10px; justify-content:center;">
                             <span><i style="background:var(--rotor-n)"></i>转子磁通 λᵐ（永磁体，沿 d 轴）</span>
-                            <span><i style="background:var(--accent)"></i>定子磁势 Fₛ（电流合成）</span>
+                            <span><i style="background:var(--accent)"></i>电流矢量 is（三相电流合成）</span>
                         </div>
                         <p style="font-size:0.8em; color:var(--text-3); margin-top:6px; line-height:1.55; text-align:center;">
-                            两矢量的夹角 δ（负载角）决定转矩：δ 越大转矩越大，FOC 通过控制定子电流让 Fₛ 始终超前 λᵐ 约 90°，获得最大转矩。
+                            两矢量的夹角 γ 决定转矩：只有垂直于转子磁通的电流分量（q 轴）才出力。FOC 让电流矢量 is 始终超前转子磁通约 90°，获得最大转矩——与「原理动图」里的 γ 是同一件事。
                         </p>
                     </div>
                     <!-- Control panel -->
@@ -689,12 +689,12 @@
                             <input type="range" id="simLoad" min="0" max="3" value="0" step="0.05">
                         </div>
                         <div class="slider-row">
-                            <div class="slider-label"><span class="name">电流环 Kp</span><span class="val" id="simKpVal">1.50</span></div>
-                            <input type="range" id="simKp" min="0.1" max="6" value="1.5" step="0.05">
+                            <div class="slider-label"><span class="name">速度环 Kp</span><span class="val" id="simSpKpVal">0.30</span></div>
+                            <input type="range" id="simSpKp" min="0" max="100" value="39" step="1">
                         </div>
                         <div class="slider-row">
-                            <div class="slider-label"><span class="name">电流环 Ki</span><span class="val" id="simKiVal">80</span></div>
-                            <input type="range" id="simKi" min="5" max="400" value="80" step="5">
+                            <div class="slider-label"><span class="name">速度环 Ki</span><span class="val" id="simSpKiVal">0.45</span></div>
+                            <input type="range" id="simSpKi" min="0" max="100" value="44" step="1">
                         </div>
                         <div class="slider-row">
                             <div class="slider-label"><span class="name">永磁磁链 λ_m (Wb)</span><span class="val" id="simFluxVal">0.05</span></div>
@@ -706,6 +706,7 @@
                             <button class="btn btn-secondary btn-sm" id="simResetBtn">↺ 重置</button>
                             <button class="btn btn-secondary btn-sm" id="simKickBtn">⚡ 施加扰动</button>
                         </div>
+                        <p id="simVLim" style="display:none; margin:10px 0 0; font-size:0.82em; color:var(--err); font-weight:600;">⚠ 电压限幅中：目标转速超出当前磁链下这台电机的可达上限（反电动势 + 电阻压降 ≥ Vdc/√3），再调 PI 也上不去</p>
 
                         <div class="readout-grid" style="margin-top:16px;">
                             <div class="readout"><div class="k">实际 RPM</div><div class="v" id="rdRpm">0</div></div>
@@ -714,7 +715,7 @@
                             <div class="readout"><div class="k">id (A)</div><div class="v" id="rdSimId">0.00</div></div>
                         </div>
                         <p style="font-size:0.8em; color:var(--text-3); margin-top:12px; line-height:1.5;">
-                            <strong>试试：</strong>把目标转速拉到 1200，观察转子加速；把 <code>Kp</code> 拉到 5+ 看转速振荡；按下「施加扰动」模拟突加负载，看 FOC 如何把转速拉回。
+                            <strong>试试：</strong>把目标转速拉到 1500 看转子加速；把速度环 <code>Kp</code> 拉到极端看 Iq 剧烈抖振（测速滤波的滞后被高增益放大）；按下「施加扰动」模拟突加负载，看 FOC 把转速拉回。本页调的是<strong>速度环（外环）</strong>，电流环已调好固定——波形上看到的转速现象本来就是外环的行为。
                         </p>
                     </div>
                 </div>
@@ -733,7 +734,7 @@
 
                 <div class="callout" style="margin-top:16px;">
                     <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg></div>
-                    <p><strong>电机模型</strong>：表贴式 PMSM（SPMSM），极对数 p=4。转矩 <span class="math">T<span class="sub">e</span></span>=1.5·p·λ<span class="sub">m</span>·i<span class="sub">q</span>；机械方程 <span class="math">J·dω/dt = T<span class="sub">e</span></span>−T<span class="sub">load</span>−B·ω。电流环在 dq 旋转系内闭环，电压经反 Park + 逆 Clarke + SVPWM（归一化限幅）驱动三相电流。</p>
+                    <p><strong>电机模型</strong>：表贴式 PMSM（SPMSM），极对数 p=1（画面转角即真实机械转角）。转矩 <span class="math">T<span class="sub">e</span></span>=1.5·p·λ<span class="sub">m</span>·i<span class="sub">q</span>；机械方程 <span class="math">J·dω/dt = T<span class="sub">e</span></span>−T<span class="sub">load</span>−B·ω。电流环在 dq 旋转系内闭环（已调好固定：Kp=1.5 / Ki=80），电压经反 Park + 逆 Clarke + SVPWM 驱动三相电流，限幅 Vdc/√3——超出可达转速时面板会提示「电压限幅」。速度环用编码器测速并经 100ms 低通滤波（模拟真实测速滞后——Kp 过大时这个滞后会被放大成转矩抖振）。</p>
                 </div>
                 <div id="simDbg" style="display:none;"></div>
             </div>
@@ -742,7 +743,7 @@
         <!-- ====================== TAB 4: TUNING ====================== -->
         <section class="content-section" id="tuning-section">
             <div class="tuning-wrap">
-                <p class="lead">PI 控制器是 FOC 的"肌肉"。选一个预设场景，参数会自动设好并启动仿真——观察波形里转速、Iq 的典型现象，建立调参的<strong>物理直觉</strong>。</p>
+                <p class="lead">PI 控制器是 FOC 的"肌肉"。这里调的是<strong>速度环（外环）</strong>——波形上的转速振荡、超调本来就是它的行为。选一个预设场景，参数自动设好并启动仿真，对照典型现象建立<strong>物理直觉</strong>。</p>
 
                 <h4 style="margin-bottom:12px;">预设场景</h4>
                 <div class="scenario-grid" id="scenarioGrid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:24px;"></div>
@@ -758,8 +759,8 @@
                 </div>
 
                 <div class="readout-grid" style="margin-bottom:24px;">
-                    <div class="readout"><div class="k">当前 Kp</div><div class="v" id="tuneKp">1.50</div></div>
-                    <div class="readout"><div class="k">当前 Ki</div><div class="v" id="tuneKi">80</div></div>
+                    <div class="readout"><div class="k">速度环 Kp</div><div class="v" id="tuneKp">0.30</div></div>
+                    <div class="readout"><div class="k">速度环 Ki</div><div class="v" id="tuneKi">0.45</div></div>
                     <div class="readout"><div class="k">目标 RPM</div><div class="v" id="tuneRpm">600</div></div>
                     <div class="readout"><div class="k">实际 RPM</div><div class="v" id="tuneActRpm">0</div></div>
                 </div>
@@ -924,6 +925,12 @@
         VF.invClarke = function (alpha, beta) {
             return { a: alpha, b: -0.5 * alpha + (VF.SQRT3 / 2) * beta, c: -0.5 * alpha - (VF.SQRT3 / 2) * beta };
         };
+
+        // Log-scaled gain sliders: slider 0..100 <-> gain 0.02..20 (so both
+        // fine adjustments near 0.3 and extreme values like 20 are reachable).
+        VF.gainToSlider = function (v) { return Math.round(33.3 * Math.log10(Math.max(v, 0.02) / 0.02)); };
+        VF.sliderToGain = function (x) { return +(0.02 * Math.pow(10, x / 33.3)).toPrecision(3); };
+        VF.fmtGain = function (v) { return v >= 10 ? v.toFixed(1) : (v >= 1 ? v.toFixed(2) : v.toFixed(3)); };
 
         // Read CSS variable (for canvas colors that follow theme).
         // Read from <body>: the data-theme attribute lives on body, so theme
@@ -1487,30 +1494,33 @@
         VF.PMSM = (function () {
             // default motor parameters (per-unit-ish, tuned for visible dynamics)
             var P = {
-                p: 4,          // pole pairs
+                p: 1,          // pole pairs (1 => drawn angle == mechanical angle)
                 Rs: 0.5,       // stator resistance (Ω)
                 Ls: 0.0015,    // stator inductance (H) — Ld = Lq = Ls (SPMSM)
                 lambda_m: 0.05,// permanent-magnet flux linkage (Wb)
-                J: 0.0005,     // rotor inertia (kg·m²)
+                J: 0.05,       // rotor inertia (kg·m²) — matched to speed-filter tau so transients are visible
                 B: 0.0002,     // viscous friction (N·m·s)
-                Vdc: 24,       // DC bus voltage (V) — for saturation/limit
+                Vdc: 36,       // DC bus voltage (V) — reachable ceiling ~3900 RPM
                 Kt: 0          // derived torque constant = 1.5*p*lambda_m
             };
             function recompute() { P.Kt = 1.5 * P.p * P.lambda_m; }
             recompute();
 
             // simulation state
+            var SPEED_FILTER_TAU = 0.1;  // speed-feedback low-pass (encoder emulation)
+
             var S = {
                 theta_e: 0,    // electrical angle (rad)
                 omega_m: 0,    // mechanical speed (rad/s)
+                omegaF: 0,     // filtered speed used by the speed loop
                 id: 0, iq: 0,  // dq currents (A)
                 // controller outputs
-                vd: 0, vq: 0,
+                vd: 0, vq: 0, vLim: false,
                 Te: 0,
                 // references (set by caller)
                 speedRef: 0,   // mechanical rad/s
                 loadTorque: 0, // N·m
-                kp: 1.5, ki: 80,
+                spKp: 0.3, spKi: 0.45,    // speed-loop gains (user-facing)
                 // external hooks
                 onTe: null
             };
@@ -1529,21 +1539,25 @@
                         // anti-windup clamp
                         var u = this.kp * err + this.ki * this.i;
                         var lo = (vmin == null ? -vmax : vmin);
-                        if (u > vmax) { u = vmax; this.i -= err * dt * 0.5; }
-                        else if (u < lo) { u = lo; this.i -= err * dt * 0.5; }
+                        if (u > vmax) { u = vmax; this.i -= err * dt; }
+                        else if (u < lo) { u = lo; this.i -= err * dt; }
                         return u;
                     }
                 };
             }
-            var piD = makePI(S.kp, S.ki, P.Vdc / 1.732);
-            var piQ = makePI(S.kp, S.ki, P.Vdc / 1.732);
+            // current loop: fixed, well-tuned (not user-facing)
+            var VMAX = P.Vdc / 1.732;
+            var piD = makePI(1.5, 80, VMAX);
+            var piQ = makePI(1.5, 80, VMAX);
 
-            // speed->iq reference: outer loop (PI, since current loop is fast)
-            var speedPI = makePI(0.18, 1.2, 40);
+            // speed loop -> torque demand (N·m), clamped ±3.5. Its feedback is
+            // the filtered speed: the filter lag is what makes an oversized
+            // Kp oscillate, mirroring real drives.
+            var speedPI = makePI(S.spKp, S.spKi, 3.5);
 
             function reset() {
-                S.theta_e = 0; S.omega_m = 0; S.id = 0; S.iq = 0;
-                S.vd = 0; S.vq = 0; S.Te = 0;
+                S.theta_e = 0; S.omega_m = 0; S.omegaF = 0; S.id = 0; S.iq = 0;
+                S.vd = 0; S.vq = 0; S.vLim = false; S.Te = 0;
                 piD.reset(); piQ.reset(); speedPI.reset();
             }
 
@@ -1553,18 +1567,16 @@
                 if (dt > 0.002) dt = 0.002;
                 var omega_e = S.omega_m * P.p;
 
-                // --- outer: speed loop -> iq reference (N·m demand -> A) ---
-                var speedErr = S.speedRef - S.omega_m;
+                // --- outer: speed loop (filtered feedback) -> torque demand ---
+                speedPI.kp = S.spKp; speedPI.ki = S.spKi;
+                var speedErr = S.speedRef - S.omegaF;
                 var TeDemand = speedPI.run(speedErr, dt);
                 var iqRef = TeDemand / P.Kt;          // T = Kt*iq
-                // clamp iq to a realistic range
                 var IQ_MAX = 40;
                 if (iqRef > IQ_MAX) iqRef = IQ_MAX;
                 if (iqRef < -IQ_MAX) iqRef = -IQ_MAX;
 
-                // --- inner: current loop in dq ---
-                // sync PI gains with slider state
-                piD.kp = piQ.kp = S.kp; piD.ki = piQ.ki = S.ki;
+                // --- inner: current loop in dq (fixed gains) ---
                 var idRef = 0;
                 var vd_cmd = piD.run(idRef - S.id, dt);
                 var vq_cmd = piQ.run(iqRef - S.iq, dt);
@@ -1579,6 +1591,7 @@
                 S.id += did_dt * dt;
                 S.iq += diq_dt * dt;
                 S.vd = vd_cmd; S.vq = vq_cmd;
+                S.vLim = Math.abs(vd_cmd) >= VMAX * 0.995 || Math.abs(vq_cmd) >= VMAX * 0.995;
 
                 // --- torque & mechanical ---
                 S.Te = P.Kt * S.iq;
@@ -1586,6 +1599,7 @@
                 S.omega_m += domega * dt;
                 if (S.omega_m < 0) S.omega_m = 0;     // no negative direction in this demo
                 S.theta_e = (S.theta_e + omega_e * dt) % (2 * Math.PI);
+                S.omegaF += (S.omega_m - S.omegaF) * Math.min(1, dt / SPEED_FILTER_TAU);
 
                 if (S.onTe) S.onTe(S.Te);
             }
@@ -1624,9 +1638,10 @@
             function init() {
                 els.cvM = $('cvMotor'); els.cvW = $('cvWave');
                 els.simSpd = $('simSpd'); els.simLoad = $('simLoad');
-                els.simKp = $('simKp'); els.simKi = $('simKi'); els.simFlux = $('simFlux');
+                els.simSpKp = $('simSpKp'); els.simSpKi = $('simSpKi'); els.simFlux = $('simFlux');
                 els.simSpdVal = $('simSpdVal'); els.simLoadVal = $('simLoadVal');
-                els.simKpVal = $('simKpVal'); els.simKiVal = $('simKiVal'); els.simFluxVal = $('simFluxVal');
+                els.simSpKpVal = $('simSpKpVal'); els.simSpKiVal = $('simSpKiVal'); els.simFluxVal = $('simFluxVal');
+                els.vLim = $('simVLim');
                 els.playBtn = $('simPlayBtn'); els.resetBtn = $('simResetBtn'); els.kickBtn = $('simKickBtn');
                 els.rdRpm = $('rdRpm'); els.rdTe = $('rdTe'); els.rdSimIq = $('rdSimIq'); els.rdSimId = $('rdSimId');
 
@@ -1639,13 +1654,15 @@
                     els.simLoadVal.textContent = (+this.value).toFixed(2);
                     VF.PMSM.S.loadTorque = +this.value;
                 });
-                els.simKp.addEventListener('input', function () {
-                    els.simKpVal.textContent = (+this.value).toFixed(2);
-                    VF.PMSM.S.kp = +this.value;
+                els.simSpKp.addEventListener('input', function () {
+                    var v = VF.sliderToGain(+this.value);
+                    els.simSpKpVal.textContent = VF.fmtGain(v);
+                    VF.PMSM.S.spKp = v;
                 });
-                els.simKi.addEventListener('input', function () {
-                    els.simKiVal.textContent = this.value;
-                    VF.PMSM.S.ki = +this.value;
+                els.simSpKi.addEventListener('input', function () {
+                    var v = VF.sliderToGain(+this.value);
+                    els.simSpKiVal.textContent = VF.fmtGain(v);
+                    VF.PMSM.S.spKi = v;
                 });
                 els.simFlux.addEventListener('input', function () {
                     els.simFluxVal.textContent = (+this.value).toFixed(3);
@@ -1662,14 +1679,14 @@
                     hist.rpm.length = 0; hist.ref.length = 0; hist.iq.length = 0; hist.id.length = 0;
                 });
                 els.kickBtn.addEventListener('click', function () {
-                    VF.PMSM.S.loadTorque = (VF.PMSM.S.loadTorque || 0) + 2.0;
+                    VF.PMSM.S.loadTorque = (VF.PMSM.S.loadTorque || 0) + 1.5;
                     kickTimer = 1.2; // seconds of extra load
                 });
 
                 // init references
                 VF.PMSM.S.speedRef = (+els.simSpd.value) * 2 * Math.PI / 60;
-                VF.PMSM.S.kp = +els.simKp.value;
-                VF.PMSM.S.ki = +els.simKi.value;
+                VF.PMSM.S.spKp = VF.sliderToGain(+els.simSpKp.value);
+                VF.PMSM.S.spKi = VF.sliderToGain(+els.simSpKi.value);
                 VF.PMSM.setFlux(+els.simFlux.value);
 
                 // start/stop driven by tab visibility (see VF.onTabSwitch below)
@@ -1689,9 +1706,12 @@
                 if (!running) return;
                 try {
                     var dt = (now - (loop._last || now)) / 1000; loop._last = now;
+                    if (dt > 0.1) dt = 0.1;
                     if (kickTimer > 0) { kickTimer -= dt; if (kickTimer <= 0) VF.PMSM.S.loadTorque = +els.simLoad.value; }
-                    // fixed-step physics substepping for stability (run multiple small steps)
-                    var steps = 8, h = dt / steps;
+                    // real-time physics: 0.1 ms fixed substeps (capped), so wall
+                    // time == simulated time and waveform time axes are honest
+                    var steps = Math.min(800, Math.max(1, Math.round(dt / 0.0001)));
+                    var h = dt / steps;
                     for (var i = 0; i < steps; i++) VF.PMSM.step(h);
                     // record history
                     var rpm = VF.PMSM.rpm();
@@ -1737,6 +1757,7 @@
                 drawMotor();
                 drawWave();
                 // readouts
+                els.vLim.style.display = VF.PMSM.S.vLim ? 'block' : 'none';
                 els.rdRpm.textContent = Math.round(VF.PMSM.rpm());
                 els.rdTe.textContent = VF.PMSM.S.Te.toFixed(2);
                 els.rdSimIq.textContent = VF.PMSM.S.iq.toFixed(2);
@@ -1786,7 +1807,7 @@
                 if (Math.hypot(ab.alpha, ab.beta) > 0.05) {
                     VF.arrow(ctx, cx, cy, cx + Math.cos(mmfAng) * fmag, cy + Math.sin(mmfAng) * fmag, VF.css('--accent'), 3.5);
                     ctx.fillStyle = VF.css('--accent');
-                    ctx.fillText('定子磁势 Fₛ', cx + Math.cos(mmfAng) * fmag + 6, cy + Math.sin(mmfAng) * fmag - 4);
+                    ctx.fillText('电流矢量 is', cx + Math.cos(mmfAng) * fmag + 6, cy + Math.sin(mmfAng) * fmag - 4);
                 }
 
                 // 负载角 δ（两矢量夹角 = 转矩的来源）—— 在两矢量间画弧
@@ -1848,9 +1869,9 @@
                 // RPM badge + 负载角 δ
                 ctx.fillStyle = VF.css('--text-3'); ctx.font = '11px Inter, sans-serif';
                 ctx.fillText('θ = ' + Math.round(VF.PMSM.S.theta_e * VF.RAD2DEG) + '°', 10, 18);
-                ctx.fillText('p = ' + VF.PMSM.P.p + ' 极对数', 10, 34);
+                ctx.fillText('极对数 p=' + VF.PMSM.P.p + '（画面即真实转角）', 10, 34);
                 ctx.fillStyle = VF.css('--text-2');
-                ctx.fillText('负载角 δ = ' + Math.round(Math.abs(delta) * VF.RAD2DEG) + '°（定子磁势超前转子磁通）', 10, 50);
+                ctx.fillText('γ = ' + Math.round(Math.abs(delta) * VF.RAD2DEG) + '°（电流矢量超前转子磁通，目标≈90°）', 10, 50);
             }
 
             function drawCoil(ctx, cx, cy, r, ang, I, color, label) {
@@ -1914,7 +1935,7 @@
                 ctx.stroke();
 
                 // ---- current region ----
-                var iMax = 25; // A scale
+                var iMax = 45; // A scale
                 var yCur = function (v) {
                     var mid = (splitY + bot) / 2;
                     return mid - (v / iMax) * ((bot - splitY) / 2 - 4);
@@ -1975,57 +1996,57 @@
             var SCENARIOS = [
                 {
                     id: 'ideal', name: '理想参数', icon: '✓', accent: false,
-                    desc: 'Kp=1.5, Ki=80。快速、无超调地到达目标转速，教科书级响应。',
-                    apply: function () { setParams(600, 0, 1.5, 80, 0.05); }
+                    desc: '速度环 Kp=0.3, Ki=0.45。约 2 秒到达目标，几乎无超调，教科书级响应。',
+                    apply: function () { setParams(600, 0, 0.3, 0.45, 0.05); }
                 },
                 {
-                    id: 'kp_high', name: 'Kp 过大（振荡）', icon: '〰', accent: true,
-                    desc: 'Kp=20。比例增益过高，转速在目标附近大幅振荡，难以收敛。',
-                    apply: function () { setParams(600, 0, 20, 80, 0.05); }
+                    id: 'kp_high', name: 'Kp 过大（转矩抖振）', icon: '〰', accent: true,
+                    desc: '速度环 Kp=20。测速滤波的滞后被高增益放大：转矩指令剧烈抖振，Iq 满幅摆动（噪声、发热），转速也随之毛刺。',
+                    apply: function () { setParams(600, 0, 20, 0.45, 0.05); }
                 },
                 {
                     id: 'ki_high', name: 'Ki 过大（超调）', icon: '↗', accent: true,
-                    desc: 'Ki=350。积分累积太快，转速冲过目标一大截才慢慢回落。',
-                    apply: function () { setParams(600, 0, 1.5, 350, 0.05); }
+                    desc: '速度环 Ki=3。积分把环路推向欠阻尼：转速冲过目标后大幅来回摆动才收敛。',
+                    apply: function () { setParams(600, 0, 0.3, 3, 0.05); }
                 },
                 {
                     id: 'loaded', name: '带载启动', icon: '⚓', accent: false,
-                    desc: '一开始就有 1.5 N·m 负载。观察 Iq 如何维持一个稳态值来对抗负载。',
-                    apply: function () { setParams(800, 1.5, 1.5, 100, 0.05); }
+                    desc: '目标 800 RPM、启动即带 1.0 N·m 负载。观察 Iq 如何维持约 13A 的稳态值来对抗负载。',
+                    apply: function () { setParams(800, 1.0, 0.3, 0.45, 0.05); }
                 },
                 {
                     id: 'disturb', name: '抗扰动', icon: '⚡', accent: false,
-                    desc: '稳定运行 3 秒后突加 2 N·m 负载，看 FOC 把转速拉回目标。',
+                    desc: '800 RPM 稳定运行 3 秒后突加 2.0 N·m 负载，看转速跌落约 10% 后被 FOC 拉回目标。',
                     apply: function () {
-                        setParams(800, 0, 2.0, 120, 0.05);
+                        setParams(800, 0, 0.3, 0.45, 0.05);
                         scenarioTimer = 3.0;
                     }
                 },
                 {
                     id: 'weak_flux', name: '弱磁链电机', icon: '⌀', accent: false,
                     desc: 'λ_m=0.02。永磁体弱，同样电流产生的转矩小，加速明显变慢。',
-                    apply: function () { setParams(600, 0, 1.5, 80, 0.02); }
+                    apply: function () { setParams(600, 0, 0.3, 0.45, 0.02); }
                 }
             ];
 
             function $(id) { return document.getElementById(id); }
 
-            function setParams(rpm, load, kp, ki, flux) {
+            function setParams(rpm, load, spKp, spKi, flux) {
                 VF.PMSM.S.speedRef = rpm * 2 * Math.PI / 60;
                 VF.PMSM.S.loadTorque = load;
-                VF.PMSM.S.kp = kp;
-                VF.PMSM.S.ki = ki;
+                VF.PMSM.S.spKp = spKp;
+                VF.PMSM.S.spKi = spKi;
                 VF.PMSM.setFlux(flux);
                 // sync the Tab 3 sliders so switching tabs shows consistent state
                 var sim = VF.SimUI.els();
                 if (sim.simSpd) { sim.simSpd.value = rpm; sim.simSpdVal.textContent = rpm; }
                 if (sim.simLoad) { sim.simLoad.value = load; sim.simLoadVal.textContent = load.toFixed(2); }
-                if (sim.simKp) { sim.simKp.value = kp; sim.simKpVal.textContent = kp.toFixed(2); }
-                if (sim.simKi) { sim.simKi.value = ki; sim.simKiVal.textContent = ki; }
+                if (sim.simSpKp) { sim.simSpKp.value = VF.gainToSlider(spKp); sim.simSpKpVal.textContent = VF.fmtGain(spKp); }
+                if (sim.simSpKi) { sim.simSpKi.value = VF.gainToSlider(spKi); sim.simSpKiVal.textContent = VF.fmtGain(spKi); }
                 if (sim.simFlux) { sim.simFlux.value = flux; sim.simFluxVal.textContent = flux.toFixed(3); }
                 // update tuning readouts
-                els.kp.textContent = kp.toFixed(2);
-                els.ki.textContent = ki;
+                els.kp.textContent = VF.fmtGain(spKp);
+                els.ki.textContent = VF.fmtGain(spKi);
                 els.rpm.textContent = rpm;
                 // reset state + history for a clean trace
                 VF.PMSM.reset();
@@ -2089,7 +2110,9 @@
                         scenarioTimer -= dt;
                         if (scenarioTimer <= 0) { VF.PMSM.S.loadTorque += 2.0; scenarioTimer = 0; }
                     }
-                    var steps = 8, h = dt / steps;
+                    if (dt > 0.1) dt = 0.1;
+                    var steps = Math.min(800, Math.max(1, Math.round(dt / 0.0001)));
+                    var h = dt / steps;
                     for (var i = 0; i < steps; i++) VF.PMSM.step(h);
                     var rpm = VF.PMSM.rpm();
                     hist.rpm.push(rpm);
@@ -2152,7 +2175,7 @@
                 for (var i = 0; i < N; i++) { var x = xAt(i); var y = ySpd(hist.rpm[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
                 ctx.stroke();
 
-                var iMax = 25, mid = (splitY + bot) / 2;
+                var iMax = 45, mid = (splitY + bot) / 2;
                 var yCur = function (v) { return mid - (v / iMax) * ((bot - splitY) / 2 - 3); };
                 ctx.strokeStyle = VF.css('--grid-line');
                 ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();

@@ -19,7 +19,7 @@ BLDC / PMSM 电机 **FOC（磁场定向控制）** 的交互式学习平台。�
 ## 技术栈
 
 - 纯 HTML / CSS / JavaScript — 零外部依赖
-- 真实 PMSM 数学（Clarke、Park、转矩与机械微分方程、双 PI 电流环）
+- 真实 PMSM 数学（Clarke、Park、转矩与机械微分方程、电流环 + 速度环双闭环；测速含低通滤波，电压限幅可观测）
 - 响应式设计，支持深色模式
 - 作为静态站点部署在 GitHub Pages
 
